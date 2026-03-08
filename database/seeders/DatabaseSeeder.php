@@ -2,21 +2,63 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // \App\Models\User::factory(10)->create();
+        $this->call([
+            // Authentication Module
+            UserSeeder::class,
+            PasswordResetSeeder::class,
+            SessionSeeder::class,
+            IdentityVerificationSeeder::class,
+            VerificationReviewSeeder::class,
+            VerificationAttemptSeeder::class,
+            UserSkillSeeder::class,
+            SkillEndorsementSeeder::class,
+            PortfolioItemSeeder::class,
+            PortfolioSkillSeeder::class,
 
-        // \App\Models\User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
+            // Project Management Module
+            ProjectSeeder::class,
+            ProjectSkillSeeder::class,
+            ProjectRoleSeeder::class,
+            ProjectMilestoneSeeder::class,
+            ProjectTeamMemberSeeder::class,
+            ProjectApplicationSeeder::class,
+            ApplicationSkillSeeder::class,
+
+            // Collaboration Module
+            UserConnectionSeeder::class,
+            CollaborationInvitationSeeder::class,
+            MatchSeeder::class,
+            MatchFeedbackSeeder::class,
+            CollaborationRatingSeeder::class,
+
+            // Communication Module
+            ConversationSeeder::class,
+            ConversationParticipantSeeder::class,
+            MessageSeeder::class,
+            MessageReadReceiptSeeder::class,
+            MessageReactionSeeder::class,
+            FileSeeder::class,
+            SharedFileSeeder::class,
+            VideoCallSeeder::class,
+            CallParticipantSeeder::class,
+            NotificationSeeder::class,
+            NotificationPreferenceSeeder::class,
+
+            // Administration Module
+            AdminActionSeeder::class,
+            ReportSeeder::class,
+            ContentModerationSeeder::class,
+            UserRestrictionSeeder::class,
+            SystemLogSeeder::class,
+            AnalyticsEventSeeder::class,
+            SystemSettingSeeder::class,
+            ConfigurationHistorySeeder::class,
+        ]);
     }
 }
