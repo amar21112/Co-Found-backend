@@ -35,42 +35,42 @@ class SystemLogFactory extends Factory
 
     public function debug(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'log_level' => 'debug',
         ]);
     }
 
     public function info(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'log_level' => 'info',
         ]);
     }
 
     public function warning(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'log_level' => 'warning',
         ]);
     }
 
     public function error(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'log_level' => 'error',
         ]);
     }
 
     public function critical(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'log_level' => 'critical',
         ]);
     }
 
     public function forComponent($component): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'component' => $component,
         ]);
     }

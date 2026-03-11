@@ -66,7 +66,7 @@ class ProjectFactory extends Factory
 
     public function planning(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'planning',
             'is_accepting_applications' => true,
         ]);
@@ -74,7 +74,7 @@ class ProjectFactory extends Factory
 
     public function active(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'active',
             'is_accepting_applications' => true,
         ]);
@@ -82,7 +82,7 @@ class ProjectFactory extends Factory
 
     public function completed(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'completed',
             'actual_completion_date' => $this->faker->dateTimeBetween('-2 months', 'now'),
             'is_accepting_applications' => false,
@@ -91,14 +91,14 @@ class ProjectFactory extends Factory
 
     public function public(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'visibility' => 'public',
         ]);
     }
 
     public function private(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'visibility' => 'private',
             'is_accepting_applications' => false,
         ]);
@@ -106,7 +106,7 @@ class ProjectFactory extends Factory
 
     public function acceptingApplications(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'is_accepting_applications' => true,
         ]);
     }

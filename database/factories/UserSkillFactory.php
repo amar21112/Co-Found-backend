@@ -22,8 +22,9 @@ class UserSkillFactory extends Factory
             'Redis', 'Go', 'Rust', 'Swift', 'Kotlin', 'Flutter', 'React Native'
         ];
 
+        $uuid = (String) Str::uuid();
         return [
-            'id' => Str::uuid(),
+            'id' => $uuid,
             'user_id' => User::factory(),
             'skill_name' => $this->faker->randomElement($skills),
             'proficiency_level' => $this->faker->numberBetween(1, 5),
@@ -38,14 +39,14 @@ class UserSkillFactory extends Factory
 
     public function approved(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'is_approved' => true,
         ]);
     }
 
     public function expert(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'proficiency_level' => 5,
             'years_experience' => $this->faker->numberBetween(5, 15),
         ]);
@@ -53,7 +54,7 @@ class UserSkillFactory extends Factory
 
     public function beginner(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'proficiency_level' => 1,
             'years_experience' => $this->faker->randomFloat(1, 0, 1),
         ]);

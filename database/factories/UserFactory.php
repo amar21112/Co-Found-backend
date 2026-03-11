@@ -12,14 +12,15 @@ class UserFactory extends Factory
 
     public function definition(): array
     {
-        $roles = ['guest', 'regular_user', 'project_owner', 'moderator', 'administrator'];
+        $roles = ['guest', 'regular_user', 'moderator', 'administrator'];
         $statuses = ['pending', 'active', 'suspended', 'banned', 'deleted'];
+        $uuid = (string) Str::uuid();
 
         return [
-            'id' => Str::uuid(),
+            'id' => $uuid,
             'email' => $this->faker->unique()->safeEmail(),
             'username' => $this->faker->unique()->userName(),
-            'password_hash' => bcrypt('password'),
+            'password' => bcrypt('password'),
             'full_name' => $this->faker->name(),
             'profile_picture_url' => $this->faker->optional(0.7)->imageUrl(300, 300, 'people'),
             'bio' => $this->faker->optional(0.8)->paragraphs(3, true),
@@ -47,8 +48,17 @@ class UserFactory extends Factory
 
     public function admin(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state( [
             'role' => 'administrator',
+            'email_verified' => true,
+            'identity_verified' => true,
+        ]);
+    }
+
+    public function regularUser(): static
+    {
+        return $this->state( [
+            'role' => 'regular_user',
             'email_verified' => true,
             'identity_verified' => true,
         ]);
@@ -56,29 +66,22 @@ class UserFactory extends Factory
 
     public function moderator(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state( [
             'role' => 'moderator',
             'email_verified' => true,
         ]);
     }
 
-    public function projectOwner(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'role' => 'project_owner',
-        ]);
-    }
-
     public function active(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state( [
             'account_status' => 'active',
         ]);
     }
 
     public function verified(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state( [
             'identity_verified' => true,
             'identity_verification_level' => 'advanced',
         ]);
@@ -86,7 +89,7 @@ class UserFactory extends Factory
 
     public function unverified(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state( [
             'email_verified' => false,
             'identity_verified' => false,
         ]);

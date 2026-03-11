@@ -40,7 +40,7 @@ class NotificationPreferenceFactory extends Factory
 
     public function allEnabled(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'platform_notifications' => true,
             'email_notifications' => true,
             'push_notifications' => true,
@@ -58,7 +58,7 @@ class NotificationPreferenceFactory extends Factory
 
     public function quietHours(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'quiet_hours_start' => '22:00',
             'quiet_hours_end' => '07:00',
         ]);
@@ -66,7 +66,7 @@ class NotificationPreferenceFactory extends Factory
 
     public function digestDaily(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'notification_digest' => 'daily',
         ]);
     }

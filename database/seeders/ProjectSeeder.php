@@ -14,9 +14,14 @@ class ProjectSeeder extends Seeder
 {
     public function run(): void
     {
-        $projectOwners = User::where('role', 'project_owner')->get();
+        // Get all regular users who can potentially become project owners
+        $potentialOwners = User::where('role', 'regular_user')->get();
 
-        // Create active projects
+        // Randomly select a subset to become project owners
+        $projectOwnerCount = min(30, $potentialOwners->count()); // We want about 30 project owners
+        $projectOwners = $potentialOwners->random($projectOwnerCount);
+
+        // Create active projects for selected project owners
         foreach ($projectOwners as $owner) {
             $projectCount = rand(1, 3);
 
@@ -34,7 +39,7 @@ class ProjectSeeder extends Seeder
             }
         }
 
-        // Create planning projects
+        // Create planning projects for some project owners
         foreach ($projectOwners->random(min(10, $projectOwners->count())) as $owner) {
             $project = Project::factory()
                 ->planning()
@@ -46,7 +51,7 @@ class ProjectSeeder extends Seeder
             $this->createProjectMilestones($project, rand(2, 4));
         }
 
-        // Create completed projects
+        // Create completed projects for some project owners
         foreach ($projectOwners->random(min(15, $projectOwners->count())) as $owner) {
             $project = Project::factory()
                 ->completed()
@@ -59,7 +64,7 @@ class ProjectSeeder extends Seeder
             $this->createTeamMembers($project, true);
         }
 
-        // Create private projects
+        // Create private projects for some project owners
         foreach ($projectOwners->random(min(8, $projectOwners->count())) as $owner) {
             $project = Project::factory()
                 ->active()
@@ -71,7 +76,7 @@ class ProjectSeeder extends Seeder
             $this->createTeamMembers($project);
         }
 
-        // Create specific test projects
+        // Create specific test projects for John Doe (who should be a project owner)
         $john = User::where('email', 'john.doe@example.com')->first();
 
         if ($john) {
@@ -95,6 +100,30 @@ class ProjectSeeder extends Seeder
             $this->createProjectMilestones($project, 5);
             $this->createTeamMembers($project, true);
         }
+
+        // Create a project for Maria Garcia
+        $maria = User::where('email', 'maria.garcia@example.com')->first();
+
+        if ($maria) {
+            $project = Project::factory()
+                ->active()
+                ->public()
+                ->acceptingApplications()
+                ->create([
+                    'owner_id' => $maria->id,
+                    'title' => 'E-Learning Platform for Developers',
+                    'slug' => 'e-learning-platform',
+                    'short_description' => 'Interactive learning platform with coding challenges',
+                    'category' => 'Web Development',
+                    'team_size_max' => 5,
+                    'current_team_size' => 2
+                ]);
+
+            $this->createProjectSkills($project, ['Vue.js', 'Laravel', 'MySQL', 'Redis']);
+            $this->createProjectRoles($project, ['Frontend Developer', 'Backend Developer', 'Content Creator']);
+            $this->createProjectMilestones($project, 4);
+            $this->createTeamMembers($project, true);
+        }
     }
 
     private function createProjectSkills($project, $skills)
@@ -105,7 +134,9 @@ class ProjectSeeder extends Seeder
                     ->required()
                     ->create([
                         'project_id' => $project->id,
-                        'skill_name' => $skill
+                        'skill_name' => $skill,
+                        'proficiency_required' => rand(3, 5),
+                        'positions_needed' => rand(1, 2)
                     ]);
             }
         } else {
@@ -123,7 +154,8 @@ class ProjectSeeder extends Seeder
                 ProjectRole::factory()
                     ->create([
                         'project_id' => $project->id,
-                        'role_name' => $role
+                        'role_name' => $role,
+                        'positions_needed' => rand(1, 2)
                     ]);
             }
         } else {
@@ -142,31 +174,57 @@ class ProjectSeeder extends Seeder
                     ->completed()
                     ->create([
                         'project_id' => $project->id,
-                        'order_index' => $i + 1
+                        'order_index' => $i + 1,
+                        'title' => $this->getMilestoneTitle($i)
                     ]);
             } elseif ($i < $count / 2) {
                 ProjectMilestone::factory()
                     ->completed()
                     ->create([
                         'project_id' => $project->id,
-                        'order_index' => $i + 1
+                        'order_index' => $i + 1,
+                        'title' => $this->getMilestoneTitle($i)
                     ]);
             } elseif ($i == floor($count / 2)) {
                 ProjectMilestone::factory()
                     ->inProgress()
                     ->create([
                         'project_id' => $project->id,
-                        'order_index' => $i + 1
+                        'order_index' => $i + 1,
+                        'title' => $this->getMilestoneTitle($i)
                     ]);
             } else {
                 ProjectMilestone::factory()
                     ->pending()
                     ->create([
                         'project_id' => $project->id,
-                        'order_index' => $i + 1
+                        'order_index' => $i + 1,
+                        'title' => $this->getMilestoneTitle($i)
                     ]);
             }
         }
+    }
+
+    private function getMilestoneTitle($index)
+    {
+        $titles = [
+            'Project Kickoff',
+            'Requirements Gathering',
+            'Design Phase',
+            'MVP Development',
+            'Alpha Testing',
+            'Beta Release',
+            'User Testing',
+            'Bug Fixes',
+            'Performance Optimization',
+            'Documentation',
+            'Launch Preparation',
+            'Public Release',
+            'Post-Launch Review',
+            'Maintenance Phase'
+        ];
+
+        return $titles[$index % count($titles)];
     }
 
     private function createTeamMembers($project, $includeOwner = true)
@@ -177,12 +235,15 @@ class ProjectSeeder extends Seeder
                 ->active()
                 ->create([
                     'project_id' => $project->id,
-                    'user_id' => $project->owner_id
+                    'user_id' => $project->owner_id,
+                    'role_id' => $project->roles->first()?->id
                 ]);
         }
 
         $memberCount = rand(1, $project->team_size_max - ($includeOwner ? 1 : 0));
-        $users = User::where('role', '!=', 'guest')
+
+        // Get users who are NOT the project owner
+        $users = User::where('role', 'regular_user')
             ->where('id', '!=', $project->owner_id)
             ->inRandomOrder()
             ->limit($memberCount)
@@ -194,7 +255,9 @@ class ProjectSeeder extends Seeder
                 ->create([
                     'project_id' => $project->id,
                     'user_id' => $user->id,
-                    'role_id' => $project->roles->random()->id
+                    'role_id' => $project->roles->random()->id,
+                    'position' => 'Team Member',
+                    'permissions' => 'member'
                 ]);
         }
 

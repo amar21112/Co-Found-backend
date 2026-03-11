@@ -43,7 +43,7 @@ class ProjectApplicationFactory extends Factory
 
     public function pending(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'pending',
             'reviewed_by' => null,
             'reviewed_at' => null,
@@ -52,7 +52,7 @@ class ProjectApplicationFactory extends Factory
 
     public function accepted(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'accepted',
             'reviewed_at' => $this->faker->dateTimeBetween('-2 weeks', 'now'),
         ]);
@@ -60,7 +60,7 @@ class ProjectApplicationFactory extends Factory
 
     public function rejected(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'rejected',
             'reviewed_at' => $this->faker->dateTimeBetween('-2 weeks', 'now'),
         ]);
@@ -68,7 +68,7 @@ class ProjectApplicationFactory extends Factory
 
     public function highMatch(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'match_score' => $this->faker->randomFloat(2, 0.85, 1.0),
         ]);
     }

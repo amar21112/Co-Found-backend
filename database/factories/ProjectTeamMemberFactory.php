@@ -33,14 +33,14 @@ class ProjectTeamMemberFactory extends Factory
 
     public function owner(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'permissions' => 'owner',
         ]);
     }
 
     public function active(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'is_active' => true,
             'left_at' => null,
         ]);
@@ -48,7 +48,7 @@ class ProjectTeamMemberFactory extends Factory
 
     public function inactive(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'is_active' => false,
             'left_at' => $this->faker->dateTimeBetween('-3 months', '-1 day'),
         ]);

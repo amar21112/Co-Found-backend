@@ -74,7 +74,7 @@ class ReportFactory extends Factory
 
     public function pending(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'pending',
             'assigned_to' => null,
             'resolved_by' => null,
@@ -84,7 +84,7 @@ class ReportFactory extends Factory
 
     public function underReview(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'under_review',
             'assigned_to' => User::factory(),
         ]);
@@ -92,7 +92,7 @@ class ReportFactory extends Factory
 
     public function resolved(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'resolved',
             'resolved_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
         ]);
@@ -100,7 +100,7 @@ class ReportFactory extends Factory
 
     public function highPriority(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'priority' => 'high',
             'report_type' => 'harassment',
         ]);

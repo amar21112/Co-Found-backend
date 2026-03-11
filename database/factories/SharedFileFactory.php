@@ -32,7 +32,7 @@ class SharedFileFactory extends Factory
 
     public function inConversation(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'conversation_id' => Conversation::factory(),
             'message_id' => null,
         ]);
@@ -40,7 +40,7 @@ class SharedFileFactory extends Factory
 
     public function inMessage(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'conversation_id' => null,
             'message_id' => Message::factory(),
         ]);
@@ -48,21 +48,21 @@ class SharedFileFactory extends Factory
 
     public function viewOnly(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'permission_level' => 'view',
         ]);
     }
 
     public function downloadable(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'permission_level' => 'download',
         ]);
     }
 
     public function expiring(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'expires_at' => $this->faker->dateTimeBetween('+1 day', '+1 week'),
         ]);
     }

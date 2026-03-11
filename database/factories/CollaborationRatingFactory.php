@@ -43,14 +43,14 @@ class CollaborationRatingFactory extends Factory
 
     public function public(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'visibility' => 'public',
         ]);
     }
 
     public function anonymous(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'visibility' => 'anonymous',
         ]);
     }
@@ -63,7 +63,7 @@ class CollaborationRatingFactory extends Factory
         $problemSolving = 5;
         $teamwork = 5;
 
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'communication_rating' => $communication,
             'reliability_rating' => $reliability,
             'skill_rating' => $skill,
@@ -75,7 +75,7 @@ class CollaborationRatingFactory extends Factory
 
     public function withFeedback(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'written_feedback' => $this->faker->paragraph(),
         ]);
     }

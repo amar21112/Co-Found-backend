@@ -35,28 +35,28 @@ class ConversationParticipantFactory extends Factory
 
     public function admin(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'is_admin' => true,
         ]);
     }
 
     public function active(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'left_at' => null,
         ]);
     }
 
     public function left(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'left_at' => $this->faker->dateTimeBetween('-1 month', '-1 day'),
         ]);
     }
 
     public function muted(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'muted' => true,
             'muted_until' => $this->faker->dateTimeBetween('+1 day', '+1 month'),
         ]);

@@ -43,7 +43,7 @@ class ProjectMilestoneFactory extends Factory
 
     public function pending(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'pending',
             'completed_date' => null,
         ]);
@@ -51,7 +51,7 @@ class ProjectMilestoneFactory extends Factory
 
     public function inProgress(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'in_progress',
             'completed_date' => null,
         ]);
@@ -59,7 +59,7 @@ class ProjectMilestoneFactory extends Factory
 
     public function completed(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'completed',
             'completed_date' => $this->faker->dateTimeBetween('-1 month', 'now'),
         ]);
@@ -67,7 +67,7 @@ class ProjectMilestoneFactory extends Factory
 
     public function delayed(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'delayed',
             'due_date' => $this->faker->dateTimeBetween('-2 weeks', '-1 day'),
         ]);

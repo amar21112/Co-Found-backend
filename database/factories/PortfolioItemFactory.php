@@ -36,21 +36,21 @@ class PortfolioItemFactory extends Factory
 
     public function public(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'visibility' => 'public',
         ]);
     }
 
     public function featured(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'is_featured' => true,
         ]);
     }
 
     public function image(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'item_type' => 'image',
             'file_url' => $this->faker->imageUrl(800, 600, 'business'),
         ]);
@@ -58,7 +58,7 @@ class PortfolioItemFactory extends Factory
 
     public function video(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'item_type' => 'video',
             'file_url' => $this->faker->url() . '/video.mp4',
         ]);
@@ -66,7 +66,7 @@ class PortfolioItemFactory extends Factory
 
     public function code(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'item_type' => 'code',
             'external_url' => $this->faker->url() . '/github',
         ]);

@@ -37,7 +37,7 @@ class AdminActionFactory extends Factory
 
     public function userAction(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'target_type' => 'user',
             'action_type' => $this->faker->randomElement(['user_suspended', 'user_banned', 'user_verified']),
         ]);
@@ -45,7 +45,7 @@ class AdminActionFactory extends Factory
 
     public function contentAction(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'target_type' => 'content',
             'action_type' => 'content_removed',
         ]);
@@ -53,7 +53,7 @@ class AdminActionFactory extends Factory
 
     public function reportAction(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'target_type' => 'report',
             'action_type' => 'report_resolved',
         ]);

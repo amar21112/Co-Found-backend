@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('event_type', 100);
             $table->text('message')->nullable();
             $table->json('details')->nullable();
-            $table->ipAddress('ip_address')->nullable();
+            $table->ipAddress()->nullable();
             $table->uuid('user_id')->nullable();
             $table->timestamps();
 

@@ -38,7 +38,7 @@ class FileFactory extends Factory
 
     public function image(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'mime_type' => 'image/jpeg',
             'file_name' => $this->faker->word() . '.jpg',
             'thumbnail_url' => $this->faker->imageUrl(300, 300),
@@ -47,7 +47,7 @@ class FileFactory extends Factory
 
     public function document(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'mime_type' => 'application/pdf',
             'file_name' => $this->faker->word() . '.pdf',
             'thumbnail_url' => null,
@@ -56,7 +56,7 @@ class FileFactory extends Factory
 
     public function completed(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'upload_completed' => true,
         ]);
     }

@@ -25,7 +25,7 @@ class PasswordResetFactory extends Factory
 
     public function expired(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'expires_at' => $this->faker->dateTimeBetween('-2 days', '-1 hour'),
             'used_at' => null,
         ]);
@@ -33,14 +33,14 @@ class PasswordResetFactory extends Factory
 
     public function used(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'used_at' => $this->faker->dateTimeBetween('-1 day', 'now'),
         ]);
     }
 
     public function valid(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'expires_at' => $this->faker->dateTimeBetween('+1 hour', '+24 hours'),
             'used_at' => null,
         ]);

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->json('submission_data')->nullable();
             $table->enum('result', ['success', 'failure', 'abandoned']);
             $table->string('failure_reason')->nullable();
-            $table->ipAddress('ip_address')->nullable();
+            $table->ipAddress()->nullable();
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');

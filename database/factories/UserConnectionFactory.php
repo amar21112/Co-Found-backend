@@ -31,21 +31,21 @@ class UserConnectionFactory extends Factory
 
     public function pending(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'pending',
         ]);
     }
 
     public function accepted(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'accepted',
         ]);
     }
 
     public function blocked(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'blocked',
         ]);
     }

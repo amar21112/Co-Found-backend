@@ -41,7 +41,7 @@ class CollaborationInvitationFactory extends Factory
 
     public function pending(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'pending',
             'responded_at' => null,
             'response_message' => null,
@@ -51,7 +51,7 @@ class CollaborationInvitationFactory extends Factory
 
     public function accepted(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'accepted',
             'responded_at' => $this->faker->dateTimeBetween('-2 weeks', 'now'),
         ]);
@@ -59,7 +59,7 @@ class CollaborationInvitationFactory extends Factory
 
     public function declined(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'declined',
             'responded_at' => $this->faker->dateTimeBetween('-2 weeks', 'now'),
         ]);
@@ -67,7 +67,7 @@ class CollaborationInvitationFactory extends Factory
 
     public function expired(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'expired',
             'expires_at' => $this->faker->dateTimeBetween('-1 month', '-1 day'),
         ]);

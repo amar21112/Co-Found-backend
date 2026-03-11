@@ -32,14 +32,14 @@ class CallParticipantFactory extends Factory
 
     public function host(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'role' => 'host',
         ]);
     }
 
     public function present(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'joined_at' => $this->faker->dateTimeBetween('-30 minutes', 'now'),
             'left_at' => null,
             'duration_seconds' => null,
@@ -51,7 +51,7 @@ class CallParticipantFactory extends Factory
         $joinedAt = $this->faker->dateTimeBetween('-2 hours', '-30 minutes');
         $leftAt = $this->faker->dateTimeBetween($joinedAt, $joinedAt->format('Y-m-d H:i:s') . ' +1 hour');
 
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'joined_at' => $joinedAt,
             'left_at' => $leftAt,
             'duration_seconds' => $joinedAt->diffInSeconds($leftAt),

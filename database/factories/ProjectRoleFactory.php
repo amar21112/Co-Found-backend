@@ -35,7 +35,7 @@ class ProjectRoleFactory extends Factory
 
     public function filled(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'positions_filled' => $attributes['positions_needed'],
         ]);
     }

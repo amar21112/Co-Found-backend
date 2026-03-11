@@ -53,7 +53,7 @@ class SystemSettingFactory extends Factory
 
     public function string(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'setting_type' => 'string',
             'setting_value' => $this->faker->word(),
         ]);
@@ -61,7 +61,7 @@ class SystemSettingFactory extends Factory
 
     public function boolean(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'setting_type' => 'boolean',
             'setting_value' => $this->faker->boolean(),
         ]);
@@ -69,7 +69,7 @@ class SystemSettingFactory extends Factory
 
     public function integer(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'setting_type' => 'integer',
             'setting_value' => $this->faker->numberBetween(1, 1000),
         ]);
@@ -77,7 +77,7 @@ class SystemSettingFactory extends Factory
 
     public function array(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'setting_type' => 'array',
             'setting_value' => [
                 $this->faker->word() => $this->faker->word(),
@@ -88,14 +88,14 @@ class SystemSettingFactory extends Factory
 
     public function public(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'is_public' => true,
         ]);
     }
 
     public function private(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'is_public' => false,
         ]);
     }

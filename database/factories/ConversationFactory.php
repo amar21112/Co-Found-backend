@@ -38,7 +38,7 @@ class ConversationFactory extends Factory
 
     public function direct(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'conversation_type' => 'direct',
             'title' => null,
         ]);
@@ -46,7 +46,7 @@ class ConversationFactory extends Factory
 
     public function group(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'conversation_type' => 'group',
             'title' => $this->faker->words(3, true),
         ]);
@@ -54,7 +54,7 @@ class ConversationFactory extends Factory
 
     public function forProject(Project $project): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'project_id' => $project->id,
             'conversation_type' => 'group',
             'title' => $project->title . ' Chat',

@@ -54,14 +54,14 @@ class AnalyticsEventFactory extends Factory
 
     public function pageView(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'event_type' => 'page_view',
         ]);
     }
 
     public function projectView(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'event_type' => 'project_view',
             'properties' => ['project_id' => Str::uuid()],
         ]);
@@ -69,7 +69,7 @@ class AnalyticsEventFactory extends Factory
 
     public function search(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'event_type' => 'search',
             'properties' => ['search_query' => $this->faker->words(3, true)],
         ]);
@@ -77,14 +77,14 @@ class AnalyticsEventFactory extends Factory
 
     public function authenticated(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'user_id' => User::factory(),
         ]);
     }
 
     public function anonymous(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'user_id' => null,
         ]);
     }

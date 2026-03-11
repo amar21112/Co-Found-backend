@@ -13,7 +13,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('email')->unique();
             $table->string('username')->unique();
-            $table->string('password_hash');
+            $table->string('password');
             $table->string('full_name');
             $table->string('profile_picture_url', 500)->nullable();
             $table->text('bio')->nullable();
@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('website_url', 500)->nullable();
             $table->string('linkedin_url', 500)->nullable();
             $table->string('github_url', 500)->nullable();
-            $table->enum('role', ['guest', 'regular_user', 'project_owner', 'moderator', 'administrator'])
+            $table->enum('role', ['guest', 'regular_user', 'moderator', 'administrator'])
                 ->default('regular_user');
             $table->enum('account_status', ['pending', 'active', 'suspended', 'banned', 'deleted'])
                 ->default('pending');

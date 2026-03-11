@@ -31,14 +31,14 @@ class SessionFactory extends Factory
 
     public function expired(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'expires_at' => $this->faker->dateTimeBetween('-7 days', '-1 hour'),
         ]);
     }
 
     public function mobile(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'device_info' => json_encode([
                 'browser' => 'Mobile Safari',
                 'os' => 'iOS',

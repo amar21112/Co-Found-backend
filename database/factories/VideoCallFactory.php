@@ -45,7 +45,7 @@ class VideoCallFactory extends Factory
 
     public function scheduled(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'scheduled',
             'start_time' => $this->faker->dateTimeBetween('+1 hour', '+1 week'),
             'end_time' => null,
@@ -57,7 +57,7 @@ class VideoCallFactory extends Factory
     {
         $startTime = $this->faker->dateTimeBetween('-30 minutes', 'now');
 
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'active',
             'start_time' => $startTime,
             'end_time' => null,
@@ -70,7 +70,7 @@ class VideoCallFactory extends Factory
         $startTime = $this->faker->dateTimeBetween('-2 hours', '-30 minutes');
         $endTime = $this->faker->dateTimeBetween($startTime, $startTime->format('Y-m-d H:i:s') . ' +1 hour');
 
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'ended',
             'start_time' => $startTime,
             'end_time' => $endTime,
@@ -80,7 +80,7 @@ class VideoCallFactory extends Factory
 
     public function cancelled(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'status' => 'cancelled',
             'start_time' => null,
             'end_time' => null,

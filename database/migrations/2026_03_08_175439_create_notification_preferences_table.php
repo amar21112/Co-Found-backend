@@ -20,7 +20,7 @@ return new class extends Migration
             $table->time('quiet_hours_start')->nullable();
             $table->time('quiet_hours_end')->nullable();
             $table->string('quiet_hours_timezone', 50)->nullable();
-            $table->json('preferences')->default('{}');
+            $table->json('preferences');
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');

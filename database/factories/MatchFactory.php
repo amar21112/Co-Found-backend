@@ -42,7 +42,7 @@ class MatchFactory extends Factory
 
     public function collaborator(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'match_type' => 'collaborator',
             'matched_user_id' => User::factory(),
             'matched_project_id' => null,
@@ -51,7 +51,7 @@ class MatchFactory extends Factory
 
     public function project(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'match_type' => 'project',
             'matched_user_id' => null,
             'matched_project_id' => Project::factory(),
@@ -60,14 +60,14 @@ class MatchFactory extends Factory
 
     public function highScore(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'compatibility_score' => $this->faker->randomFloat(2, 0.85, 0.99),
         ]);
     }
 
     public function unviewed(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'viewed' => false,
             'viewed_at' => null,
         ]);
@@ -75,7 +75,7 @@ class MatchFactory extends Factory
 
     public function saved(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'saved' => true,
         ]);
     }

@@ -20,9 +20,10 @@ class UserSkillSeeder extends Seeder
 
             $skillCount = rand(2, 8);
 
-            UserSkill::factory()
+            UserSkill::factory([
+                'user_id' => $user->id,
+            ])
                 ->count($skillCount)
-                ->forUser($user->id)
                 ->approved()
                 ->create();
         }

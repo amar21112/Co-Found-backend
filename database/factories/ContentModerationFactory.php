@@ -40,7 +40,7 @@ class ContentModerationFactory extends Factory
 
     public function approved(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'action_taken' => 'approved',
             'moderated_content' => null,
         ]);
@@ -48,7 +48,7 @@ class ContentModerationFactory extends Factory
 
     public function edited(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'action_taken' => 'edited',
             'moderated_content' => $this->faker->paragraphs(2, true),
         ]);
@@ -56,7 +56,7 @@ class ContentModerationFactory extends Factory
 
     public function removed(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'action_taken' => 'removed',
             'moderated_content' => null,
         ]);
@@ -64,14 +64,14 @@ class ContentModerationFactory extends Factory
 
     public function reported(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'moderation_type' => 'reported',
         ]);
     }
 
     public function autoFlagged(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'moderation_type' => 'auto_flagged',
         ]);
     }

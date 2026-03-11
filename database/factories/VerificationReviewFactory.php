@@ -40,7 +40,7 @@ class VerificationReviewFactory extends Factory
 
     public function approved(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'review_action' => 'approved',
             'automated_checks_passed' => true,
         ]);
@@ -48,7 +48,7 @@ class VerificationReviewFactory extends Factory
 
     public function rejected(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'review_action' => 'rejected',
             'rejection_reason_category' => $this->faker->randomElement(['forgery', 'expired', 'unclear', 'mismatch']),
         ]);

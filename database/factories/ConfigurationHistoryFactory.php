@@ -29,14 +29,14 @@ class ConfigurationHistoryFactory extends Factory
 
     public function withReason(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'change_reason' => $this->faker->sentence(),
         ]);
     }
 
     public function forKey($key): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'setting_key' => $key,
         ]);
     }

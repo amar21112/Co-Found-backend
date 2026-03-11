@@ -19,7 +19,7 @@ class IdentityVerification extends Model
         'user_id',
         'id_card_image_front',
         'id_card_image_back',
-        'id_card_type',
+        '',
         'id_card_number',
         'full_name_on_card',
         'date_of_birth',

@@ -45,7 +45,7 @@ class VerificationAttemptFactory extends Factory
 
     public function success(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'result' => 'success',
             'failure_reason' => null,
         ]);
@@ -53,7 +53,7 @@ class VerificationAttemptFactory extends Factory
 
     public function failure(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'result' => 'failure',
         ]);
     }

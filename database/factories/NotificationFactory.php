@@ -106,7 +106,7 @@ class NotificationFactory extends Factory
 
     public function unread(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'read' => false,
             'read_at' => null,
         ]);
@@ -114,7 +114,7 @@ class NotificationFactory extends Factory
 
     public function read(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'read' => true,
             'read_at' => $this->faker->dateTimeBetween('-2 days', 'now'),
         ]);
@@ -122,7 +122,7 @@ class NotificationFactory extends Factory
 
     public function highPriority(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'priority' => 'high',
         ]);
     }

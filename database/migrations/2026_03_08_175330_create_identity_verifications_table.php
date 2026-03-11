@@ -14,13 +14,12 @@ return new class extends Migration
             $table->uuid('user_id')->unique();
             $table->string('id_card_image_front', 500);
             $table->string('id_card_image_back', 500);
-            $table->enum('id_card_type', ['passport', 'drivers_license', 'national_id']);
             $table->string('id_card_number')->nullable(); // Encrypted
             $table->string('full_name_on_card');
             $table->date('date_of_birth');
             $table->string('nationality', 100)->nullable();
             $table->date('expiry_date')->nullable();
-            $table->enum('submission_method', ['upload', 'mobile_capture', 'webcam']);
+            $table->enum('submission_method', ['mobile_capture', 'webcam']);
             $table->ipAddress('ip_address')->nullable();
             $table->text('user_agent')->nullable();
             $table->text('device_info')->nullable();
@@ -34,7 +33,6 @@ return new class extends Migration
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->index('verification_status');
-            $table->index('submitted_at');
         });
     }
 

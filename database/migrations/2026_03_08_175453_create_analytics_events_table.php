@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('page_url', 500)->nullable();
             $table->string('referrer_url', 500)->nullable();
             $table->text('user_agent')->nullable();
-            $table->ipAddress('ip_address')->nullable();
+            $table->ipAddress()->nullable();
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');

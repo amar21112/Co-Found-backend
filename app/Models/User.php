@@ -21,7 +21,7 @@ class User extends Authenticatable
     protected $fillable = [
         'email',
         'username',
-        'password_hash',
+        'password',
         'full_name',
         'profile_picture_url',
         'bio',
@@ -43,7 +43,7 @@ class User extends Authenticatable
     ];
 
     protected $hidden = [
-        'password_hash',
+        'password',
         'email_verification_token',
         'remember_token'
     ];
@@ -61,7 +61,7 @@ class User extends Authenticatable
 
     public function getAuthPassword()
     {
-        return $this->password_hash;
+        return $this->password;
     }
 
     // Relationships

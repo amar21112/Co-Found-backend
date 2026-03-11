@@ -35,14 +35,14 @@ class ProjectSkillFactory extends Factory
 
     public function required(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'is_required' => true,
         ]);
     }
 
     public function filled(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'positions_filled' => $attributes['positions_needed'],
         ]);
     }

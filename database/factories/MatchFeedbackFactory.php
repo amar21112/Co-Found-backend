@@ -27,14 +27,14 @@ class MatchFeedbackFactory extends Factory
 
     public function relevant(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'feedback_type' => 'relevant',
         ]);
     }
 
     public function notRelevant(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'feedback_type' => 'not_relevant',
         ]);
     }

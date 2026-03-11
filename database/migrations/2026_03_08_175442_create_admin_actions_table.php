@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('target_type', 50)->nullable();
             $table->uuid('target_id')->nullable();
             $table->json('details')->nullable();
-            $table->ipAddress('ip_address')->nullable();
+            $table->ipAddress()->nullable();
             $table->timestamps();
 
             $table->foreign('admin_id')->references('id')->on('users')->onDelete('cascade');

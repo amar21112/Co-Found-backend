@@ -40,7 +40,7 @@ class UserRestrictionFactory extends Factory
 
     public function warning(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'restriction_type' => 'warning',
             'duration_hours' => null,
             'expires_at' => null,
@@ -53,7 +53,7 @@ class UserRestrictionFactory extends Factory
         $durationHours = $this->faker->numberBetween(24, 168);
         $expiresAt = (clone $startsAt)->modify("+{$durationHours} hours");
 
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'restriction_type' => 'suspension',
             'duration_hours' => $durationHours,
             'starts_at' => $startsAt,
@@ -64,7 +64,7 @@ class UserRestrictionFactory extends Factory
 
     public function ban(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'restriction_type' => 'ban',
             'duration_hours' => null,
             'expires_at' => null,
@@ -74,7 +74,7 @@ class UserRestrictionFactory extends Factory
 
     public function active(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'is_active' => true,
             'lifted_by' => null,
             'lifted_at' => null,
@@ -83,7 +83,7 @@ class UserRestrictionFactory extends Factory
 
     public function lifted(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'is_active' => false,
             'lifted_by' => User::factory(),
             'lifted_at' => $this->faker->dateTimeBetween('-1 month', 'now'),

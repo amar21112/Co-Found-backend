@@ -22,7 +22,7 @@ class IdentityVerificationFactory extends Factory
             'user_id' => User::factory(),
             'id_card_image_front' => 'verifications/' . $this->faker->uuid() . '-front.jpg',
             'id_card_image_back' => 'verifications/' . $this->faker->uuid() . '-back.jpg',
-            'id_card_type' => $this->faker->randomElement($idTypes),
+            '' => $this->faker->randomElement($idTypes),
             'id_card_number' => $this->faker->optional(0.8)->regexify('[A-Z0-9]{9}'),
             'full_name_on_card' => $this->faker->name(),
             'date_of_birth' => $this->faker->date('Y-m-d', '-18 years'),
@@ -50,7 +50,7 @@ class IdentityVerificationFactory extends Factory
 
     public function pending(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'verification_status' => 'pending',
             'liveness_check_passed' => true,
         ]);
@@ -58,7 +58,7 @@ class IdentityVerificationFactory extends Factory
 
     public function underReview(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'verification_status' => 'under_review',
             'liveness_check_passed' => true,
         ]);
@@ -66,7 +66,7 @@ class IdentityVerificationFactory extends Factory
 
     public function verified(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'verification_status' => 'verified',
             'liveness_check_passed' => true,
             'face_match_score' => $this->faker->randomFloat(2, 0.85, 1.0),
@@ -75,7 +75,7 @@ class IdentityVerificationFactory extends Factory
 
     public function rejected(): static
     {
-        return $this->state(fn (array $attributes) => [
+        return $this->state([
             'verification_status' => 'rejected',
             'rejection_reason' => $this->faker->randomElement([
                 'Image too blurry',
