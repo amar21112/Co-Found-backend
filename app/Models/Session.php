@@ -3,48 +3,36 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Session extends Model
 {
-    use HasFactory, HasUuids;
+    use HasUuids;
 
-    protected $table = 'sessions';
+    public $timestamps    = false;
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
+    protected $table      = 'sessions';
 
     protected $fillable = [
-        'user_id',
-        'session_token',
-        'ip_address',
-        'user_agent',
-        'device_info',
-        'expires_at'
+        'user_id', 'session_token', 'ip_address',
+        'user_agent', 'device_info', 'expires_at',
     ];
 
     protected $casts = [
-        'expires_at' => 'datetime'
+        'expires_at' => 'datetime',
+        'created_at' => 'datetime',
     ];
 
-    public function user()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 
-    public function scopeActive($query)
+    public function isExpired(): bool
     {
-        return $query->where('expires_at', '>', now());
-    }
-
-    public function scopeExpired($query)
-    {
-        return $query->where('expires_at', '<=', now());
-    }
-
-    public function isActive()
-    {
-        return $this->expires_at > now();
+        return $this->expires_at->isPast();
     }
 }

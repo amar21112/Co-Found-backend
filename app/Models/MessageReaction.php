@@ -3,31 +3,29 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MessageReaction extends Model
 {
-    use HasFactory, HasUuids;
+    use HasUuids;
 
-    protected $table = 'message_reactions';
+    public $timestamps    = false;
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
-    protected $fillable = [
-        'message_id',
-        'user_id',
-        'reaction'
-    ];
+    protected $fillable = ['message_id', 'user_id', 'reaction'];
 
-    public function message()
+    protected $casts = ['created_at' => 'datetime'];
+
+    public function message(): BelongsTo
     {
-        return $this->belongsTo(Message::class, 'message_id');
+        return $this->belongsTo(Message::class);
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 }

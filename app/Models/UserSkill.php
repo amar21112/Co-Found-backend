@@ -5,52 +5,35 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class UserSkill extends Model
 {
     use HasFactory, HasUuids;
 
-    protected $table = 'user_skills';
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
-        'user_id',
-        'skill_name',
-        'proficiency_level',
-        'years_experience',
-        'is_approved'
+        'user_id', 'skill_name', 'proficiency_level',
+        'years_experience', 'is_approved',
     ];
 
     protected $casts = [
         'proficiency_level' => 'integer',
-        'years_experience' => 'decimal:1',
-        'is_approved' => 'boolean'
+        'years_experience'  => 'float',
+        'is_approved'       => 'boolean',
     ];
 
-    public function user()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 
-    public function endorsements()
+    public function endorsements(): HasMany
     {
-        return $this->hasMany(SkillEndorsement::class, 'user_skill_id');
-    }
-
-    public function scopeApproved($query)
-    {
-        return $query->where('is_approved', true);
-    }
-
-    public function scopePending($query)
-    {
-        return $query->where('is_approved', false);
-    }
-
-    public function getEndorsementCountAttribute()
-    {
-        return $this->endorsements()->count();
+        return $this->hasMany(SkillEndorsement::class);
     }
 }

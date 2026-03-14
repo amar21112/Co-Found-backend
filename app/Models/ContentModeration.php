@@ -3,58 +3,28 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ContentModeration extends Model
 {
-    use HasFactory, HasUuids;
+    use HasUuids;
 
-    protected $table = 'content_moderation';
+    public $timestamps    = false;
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
-        'moderator_id',
-        'content_type',
-        'content_id',
-        'moderation_type',
-        'original_content',
-        'moderated_content',
-        'action_taken',
-        'reason',
-        'guideline_referenced'
+        'moderator_id', 'content_type', 'content_id',
+        'moderation_type', 'original_content', 'moderated_content',
+        'action_taken', 'reason', 'guideline_referenced',
     ];
 
-    public function moderator()
+    protected $casts = ['created_at' => 'datetime'];
+
+    public function moderator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'moderator_id');
-    }
-
-    public function content()
-    {
-        return $this->morphTo('content', 'content_type', 'content_id');
-    }
-
-    public function scopeByModerator($query, $moderatorId)
-    {
-        return $query->where('moderator_id', $moderatorId);
-    }
-
-    public function scopeByContentType($query, $contentType)
-    {
-        return $query->where('content_type', $contentType);
-    }
-
-    public function scopeForContent($query, $contentType, $contentId)
-    {
-        return $query->where('content_type', $contentType)
-            ->where('content_id', $contentId);
-    }
-
-    public function scopeRecent($query)
-    {
-        return $query->orderBy('created_at', 'desc');
     }
 }

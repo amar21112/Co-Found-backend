@@ -4,321 +4,312 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, HasUuids, Notifiable, SoftDeletes;
+    use HasFactory, HasUuids, Notifiable, SoftDeletes;
 
-    protected $table = 'users';
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
-        'email',
-        'username',
-        'password',
-        'full_name',
-        'profile_picture_url',
-        'bio',
-        'location',
-        'website_url',
-        'linkedin_url',
-        'github_url',
-        'role',
-        'account_status',
-        'email_verified',
-        'identity_verified',
-        'identity_verification_level',
-        'email_verification_token',
-        'email_verification_expires',
-        'last_login_at',
-        'last_login_ip',
-        'login_attempts',
-        'locked_until'
+        'email', 'username', 'password', 'full_name',
+        'profile_picture_url', 'bio', 'location', 'website_url',
+        'linkedin_url', 'github_url', 'role', 'account_status',
+        'email_verified', 'identity_verified', 'identity_verification_level',
+        'email_verification_token', 'email_verification_expires',
+        'last_login_at', 'last_login_ip', 'login_attempts', 'locked_until',
     ];
 
     protected $hidden = [
-        'password',
-        'email_verification_token',
-        'remember_token'
+        'password_hash', 'email_verification_token',
+        'remember_token',
     ];
 
     protected $casts = [
-        'email_verified' => 'boolean',
-        'identity_verified' => 'boolean',
-        'email_verification_expires' => 'datetime',
-        'last_login_at' => 'datetime',
-        'locked_until' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime'
+        'email_verified'            => 'boolean',
+        'identity_verified'         => 'boolean',
+        'email_verification_expires'=> 'datetime',
+        'last_login_at'             => 'datetime',
+        'locked_until'              => 'datetime',
+        'login_attempts'            => 'integer',
     ];
 
-    public function getAuthPassword()
+    // ── Auth override (column is password_hash, not password) ────────────
+    public function getAuthPassword(): string
     {
-        return $this->password;
+        return $this->password_hash;
     }
 
-    // Relationships
-    public function skills()
+    // =========================================================================
+    // Relations — Authentication Module
+    // =========================================================================
+
+    public function skills(): HasMany
     {
-        return $this->hasMany(UserSkill::class, 'user_id');
+        return $this->hasMany(UserSkill::class);
     }
 
-    public function skillEndorsements()
+    public function endorsementsGiven(): HasMany
     {
-        return $this->hasManyThrough(SkillEndorsement::class, UserSkill::class, 'user_id', 'endorsed_by_user_id');
+        return $this->hasMany(SkillEndorsement::class, 'endorsed_by_user_id');
     }
 
-    public function portfolioItems()
+    public function portfolioItems(): HasMany
     {
-        return $this->hasMany(PortfolioItem::class, 'user_id');
+        return $this->hasMany(PortfolioItem::class);
     }
 
-    public function sessions()
+    public function sessions(): HasMany
     {
-        return $this->hasMany(Session::class, 'user_id');
+        return $this->hasMany(Session::class);
     }
 
-    public function passwordResets()
+    public function passwordResets(): HasMany
     {
-        return $this->hasMany(PasswordReset::class, 'user_id');
+        return $this->hasMany(PasswordReset::class);
     }
 
-    public function identityVerification()
+    public function identityVerification(): HasOne
     {
-        return $this->hasOne(IdentityVerification::class, 'user_id');
+        return $this->hasOne(IdentityVerification::class);
     }
 
-    public function verificationAttempts()
+    public function verificationAttempts(): HasMany
     {
-        return $this->hasMany(VerificationAttempt::class, 'user_id');
+        return $this->hasMany(VerificationAttempt::class);
     }
 
-    public function ownedProjects()
+    /** Verifications this user reviewed (as moderator/admin) */
+    public function verificationReviews(): HasMany
+    {
+        return $this->hasMany(VerificationReview::class, 'reviewer_id');
+    }
+
+    // =========================================================================
+    // Relations — Project Management Module
+    // =========================================================================
+
+    public function ownedProjects(): HasMany
     {
         return $this->hasMany(Project::class, 'owner_id');
     }
 
-    public function teamMemberships()
+    public function teamMemberships(): HasMany
     {
-        return $this->hasMany(ProjectTeamMember::class, 'user_id');
+        return $this->hasMany(ProjectTeamMember::class);
     }
 
-    public function projectApplications()
+    public function projectApplications(): HasMany
     {
         return $this->hasMany(ProjectApplication::class, 'applicant_id');
     }
 
-    public function reviewedApplications()
+    /** Applications this user reviewed (as project owner) */
+    public function reviewedApplications(): HasMany
     {
         return $this->hasMany(ProjectApplication::class, 'reviewed_by');
     }
 
-    public function sentConnections()
+    // =========================================================================
+    // Relations — Collaboration Module
+    // =========================================================================
+
+    public function sentConnectionRequests(): HasMany
     {
         return $this->hasMany(UserConnection::class, 'requester_id');
     }
 
-    public function receivedConnections()
+    public function receivedConnectionRequests(): HasMany
     {
         return $this->hasMany(UserConnection::class, 'recipient_id');
     }
 
-    public function sentInvitations()
+    public function sentInvitations(): HasMany
     {
         return $this->hasMany(CollaborationInvitation::class, 'sender_id');
     }
 
-    public function receivedInvitations()
+    public function receivedInvitations(): HasMany
     {
         return $this->hasMany(CollaborationInvitation::class, 'recipient_id');
     }
 
-    public function matches()
+    public function matches(): HasMany
     {
-        return $this->hasMany(MatchModel::class, 'user_id');
+        return $this->hasMany(MatchModel::class);
     }
 
-    public function matchedUsers()
+    public function matchFeedback(): HasMany
     {
-        return $this->hasMany(MatchModel::class, 'matched_user_id');
+        return $this->hasMany(MatchFeedback::class);
     }
 
-    public function givenRatings()
+    public function ratingsGiven(): HasMany
     {
         return $this->hasMany(CollaborationRating::class, 'rater_id');
     }
 
-    public function receivedRatings()
+    public function ratingsReceived(): HasMany
     {
         return $this->hasMany(CollaborationRating::class, 'rated_user_id');
     }
 
-    public function conversations()
+    // =========================================================================
+    // Relations — Communication Module
+    // =========================================================================
+
+    public function createdConversations(): HasMany
     {
-        return $this->belongsToMany(Conversation::class, 'conversation_participants', 'user_id', 'conversation_id')
-            ->withPivot('joined_at', 'left_at', 'is_admin', 'muted', 'muted_until')
-            ->withTimestamps();
+        return $this->hasMany(Conversation::class, 'created_by');
     }
 
-    public function messages()
+    public function conversationParticipations(): HasMany
+    {
+        return $this->hasMany(ConversationParticipant::class);
+    }
+
+    public function sentMessages(): HasMany
     {
         return $this->hasMany(Message::class, 'sender_id');
     }
 
-    public function messageReadReceipts()
+    public function messageReadReceipts(): HasMany
     {
-        return $this->hasMany(MessageReadReceipt::class, 'user_id');
+        return $this->hasMany(MessageReadReceipt::class);
     }
 
-    public function messageReactions()
+    public function messageReactions(): HasMany
     {
-        return $this->hasMany(MessageReaction::class, 'user_id');
+        return $this->hasMany(MessageReaction::class);
     }
 
-    public function files()
+    public function uploadedFiles(): HasMany
     {
         return $this->hasMany(File::class, 'uploader_id');
     }
 
-    public function sharedFiles()
+    public function sharedFiles(): HasMany
     {
         return $this->hasMany(SharedFile::class, 'shared_by');
     }
 
-    public function videoCallsInitiated()
+    public function initiatedCalls(): HasMany
     {
         return $this->hasMany(VideoCall::class, 'initiated_by');
     }
 
-    public function callParticipations()
+    public function callParticipations(): HasMany
     {
-        return $this->hasMany(CallParticipant::class, 'user_id');
+        return $this->hasMany(CallParticipant::class);
     }
 
-    public function notifications()
+    public function notifications(): HasMany
     {
-        return $this->hasMany(Notification::class, 'user_id');
+        return $this->hasMany(Notification::class);
     }
 
-    public function notificationPreference()
+    public function notificationPreferences(): HasOne
     {
-        return $this->hasOne(NotificationPreference::class, 'user_id');
+        return $this->hasOne(NotificationPreference::class);
     }
 
-    public function adminActions()
+    // =========================================================================
+    // Relations — Administration Module
+    // =========================================================================
+
+    public function adminActions(): HasMany
     {
         return $this->hasMany(AdminAction::class, 'admin_id');
     }
 
-    public function reportsFiled()
+    public function reportsFiled(): HasMany
     {
         return $this->hasMany(Report::class, 'reporter_id');
     }
 
-    public function reportsReceived()
+    public function reportsReceived(): HasMany
     {
         return $this->hasMany(Report::class, 'reported_user_id');
     }
 
-    public function reportsAssigned()
+    public function assignedReports(): HasMany
     {
         return $this->hasMany(Report::class, 'assigned_to');
     }
 
-    public function reportsResolved()
+    public function resolvedReports(): HasMany
     {
         return $this->hasMany(Report::class, 'resolved_by');
     }
 
-    public function contentModerations()
+    public function moderatedContent(): HasMany
     {
         return $this->hasMany(ContentModeration::class, 'moderator_id');
     }
 
-    public function restrictionsGiven()
+    public function restrictions(): HasMany
+    {
+        return $this->hasMany(UserRestriction::class);
+    }
+
+    public function restrictionsIssued(): HasMany
     {
         return $this->hasMany(UserRestriction::class, 'restricted_by');
     }
 
-    public function restrictionsReceived()
-    {
-        return $this->hasMany(UserRestriction::class, 'user_id');
-    }
-
-    public function restrictionsLifted()
+    public function restrictionsLifted(): HasMany
     {
         return $this->hasMany(UserRestriction::class, 'lifted_by');
     }
 
-    public function systemLogs()
+    public function systemLogs(): HasMany
     {
-        return $this->hasMany(SystemLog::class, 'user_id');
+        return $this->hasMany(SystemLog::class);
     }
 
-    public function analyticsEvents()
+    public function analyticsEvents(): HasMany
     {
-        return $this->hasMany(AnalyticsEvent::class, 'user_id');
+        return $this->hasMany(AnalyticsEvent::class);
     }
 
-    public function settingsUpdated()
+    public function updatedSettings(): HasMany
     {
         return $this->hasMany(SystemSetting::class, 'updated_by');
     }
 
-    public function configurationChanges()
+    public function configurationChanges(): HasMany
     {
         return $this->hasMany(ConfigurationHistory::class, 'changed_by');
     }
 
-    // Scopes
-    public function scopeActive($query)
+    // =========================================================================
+    // Helpers
+    // =========================================================================
+
+    public function isAdmin(): bool
     {
-        return $query->where('account_status', 'active');
+        return $this->role === 'admin';
     }
 
-    public function scopeVerified($query)
+    public function isModerator(): bool
     {
-        return $query->where('identity_verified', true);
+        return in_array($this->role, ['admin', 'moderator']);
     }
 
-    public function scopeByRole($query, $role)
+    public function isActive(): bool
     {
-        return $query->where('role', $role);
+        return $this->account_status === 'active';
     }
 
-    public function scopeOnline($query)
+    public function isIdentityVerified(): bool
     {
-        return $query->whereHas('sessions', function ($q) {
-            $q->where('expires_at', '>', now());
-        });
-    }
-
-    // Accessors
-    public function getIsOnlineAttribute()
-    {
-        return $this->sessions()->where('expires_at', '>', now())->exists();
-    }
-
-    public function getProfileCompletenessAttribute()
-    {
-        $score = 0;
-        if ($this->bio) $score += 20;
-        if ($this->profile_picture_url) $score += 20;
-        if ($this->skills()->count() >= 3) $score += 20;
-        if ($this->portfolioItems()->count() >= 1) $score += 20;
-        if ($this->linkedin_url || $this->github_url) $score += 20;
-        return $score;
-    }
-
-    public function getAverageRatingAttribute()
-    {
-        return $this->receivedRatings()->avg('overall_rating') ?? 0;
+        return (bool) $this->identity_verified;
     }
 }

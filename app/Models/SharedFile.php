@@ -3,72 +3,47 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SharedFile extends Model
 {
-    use HasFactory, HasUuids;
+    use HasUuids;
 
-    protected $table = 'shared_files';
+    public $timestamps    = false;
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
-        'file_id',
-        'conversation_id',
-        'message_id',
-        'shared_by',
-        'permission_level',
-        'expires_at'
+        'file_id', 'conversation_id', 'message_id',
+        'shared_by', 'permission_level', 'expires_at',
     ];
 
     protected $casts = [
-        'expires_at' => 'datetime'
+        'expires_at' => 'datetime',
+        'created_at' => 'datetime',
     ];
 
-    public function file()
+    public function file(): BelongsTo
     {
-        return $this->belongsTo(File::class, 'file_id');
+        return $this->belongsTo(File::class);
     }
 
-    public function conversation()
+    public function conversation(): BelongsTo
     {
-        return $this->belongsTo(Conversation::class, 'conversation_id');
+        return $this->belongsTo(Conversation::class);
     }
 
-    public function message()
+    public function message(): BelongsTo
     {
-        return $this->belongsTo(Message::class, 'message_id');
+        return $this->belongsTo(Message::class);
     }
 
-    public function sharedBy()
+    public function sharedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'shared_by');
     }
 
-    public function scopeActive($query)
-    {
-        return $query->where(function ($q) {
-            $q->whereNull('expires_at')
-                ->orWhere('expires_at', '>', now());
-        });
-    }
-
-    public function scopeExpired($query)
-    {
-        return $query->where('expires_at', '<=', now());
-    }
-
-    public function isExpired()
-    {
-        return $this->expires_at && $this->expires_at <= now();
-    }
-
-    public function hasPermission($level)
-    {
-        $levels = ['view' => 1, 'download' => 2, 'edit' => 3];
-        return $levels[$this->permission_level] >= $levels[$level];
-    }
+    public function isExpired(): bool { return $this->expires_at?->isPast(); }
 }

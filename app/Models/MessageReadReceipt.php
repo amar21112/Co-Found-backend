@@ -3,37 +3,29 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MessageReadReceipt extends Model
 {
-    use HasFactory, HasUuids;
+    use HasUuids;
 
-    protected $table = 'message_read_receipts';
+    public $timestamps    = false;
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
-    protected $fillable = [
-        'message_id',
-        'user_id',
-        'read_at'
-    ];
+    protected $fillable = ['message_id', 'user_id', 'read_at'];
 
-    protected $casts = [
-        'read_at' => 'datetime'
-    ];
+    protected $casts = ['read_at' => 'datetime'];
 
-    public $timestamps = false;
-
-    public function message()
+    public function message(): BelongsTo
     {
-        return $this->belongsTo(Message::class, 'message_id');
+        return $this->belongsTo(Message::class);
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 }

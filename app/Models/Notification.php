@@ -5,80 +5,40 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
     use HasFactory, HasUuids;
 
-    protected $table = 'notifications';
+    public $timestamps    = false;
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
-        'user_id',
-        'type',
-        'title',
-        'body',
-        'data',
-        'priority',
-        'read',
-        'read_at',
-        'delivered_at'
+        'user_id', 'type', 'title', 'body', 'data',
+        'priority', 'read', 'read_at', 'delivered_at',
     ];
 
     protected $casts = [
-        'data' => 'array',
-        'read' => 'boolean',
-        'read_at' => 'datetime',
-        'delivered_at' => 'datetime'
+        'data'         => 'array',
+        'read'         => 'boolean',
+        'read_at'      => 'datetime',
+        'delivered_at' => 'datetime',
+        'created_at'   => 'datetime',
     ];
 
-    public function user()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 
-    public function scopeUnread($query)
+    public function markAsRead(): void
     {
-        return $query->where('read', false);
+        $this->update(['read' => true, 'read_at' => now()]);
     }
 
-    public function scopeRead($query)
-    {
-        return $query->where('read', true);
-    }
-
-    public function scopeByType($query, $type)
-    {
-        return $query->where('type', $type);
-    }
-
-    public function scopeHighPriority($query)
-    {
-        return $query->where('priority', 'high');
-    }
-
-    public function scopeRecent($query)
-    {
-        return $query->orderBy('created_at', 'desc');
-    }
-
-    public function markAsRead()
-    {
-        $this->read = true;
-        $this->read_at = now();
-        $this->save();
-    }
-
-    public function markAsDelivered()
-    {
-        $this->delivered_at = now();
-        $this->save();
-    }
-
-    public function isRead()
-    {
-        return $this->read;
-    }
+    public function isUnread(): bool { return !$this->read; }
+    public function isHigh(): bool   { return $this->priority === 'high'; }
 }

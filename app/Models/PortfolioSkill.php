@@ -3,27 +3,22 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PortfolioSkill extends Model
 {
-    use HasFactory, HasUuids;
+    use HasUuids;
 
-    protected $table = 'portfolio_skills';
+    public $timestamps    = false;
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
-    protected $fillable = [
-        'portfolio_item_id',
-        'skill_name'
-    ];
+    protected $fillable = ['portfolio_item_id', 'skill_name'];
 
-    public $timestamps = false;
-
-    public function portfolioItem()
+    public function portfolioItem(): BelongsTo
     {
-        return $this->belongsTo(PortfolioItem::class, 'portfolio_item_id');
+        return $this->belongsTo(PortfolioItem::class);
     }
 }

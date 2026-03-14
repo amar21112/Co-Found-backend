@@ -3,31 +3,29 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MatchFeedback extends Model
 {
-    use HasFactory, HasUuids;
+    use HasUuids;
 
-    protected $table = 'match_feedback';
+    public $timestamps    = false;
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
-    protected $fillable = [
-        'match_id',
-        'user_id',
-        'feedback_type'
-    ];
+    protected $fillable = ['match_id', 'user_id', 'feedback_type'];
 
-    public function match()
+    protected $casts = ['created_at' => 'datetime'];
+
+    public function match(): BelongsTo
     {
-        return $this->belongsTo(MatchModel::class, 'match_id');
+        return $this->belongsTo(MatchModel::class);
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 }

@@ -6,134 +6,63 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Message extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    protected $table = 'messages';
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
-        'conversation_id',
-        'sender_id',
-        'message_type',
-        'content',
-        'formatted_content',
-        'replied_to_message_id',
-        'is_pinned',
-        'is_edited'
+        'conversation_id', 'sender_id', 'message_type',
+        'content', 'formatted_content', 'replied_to_message_id',
+        'is_pinned', 'is_edited',
     ];
 
     protected $casts = [
         'formatted_content' => 'array',
-        'is_pinned' => 'boolean',
-        'is_edited' => 'boolean'
+        'is_pinned'         => 'boolean',
+        'is_edited'         => 'boolean',
     ];
 
-    public function conversation()
+    public function conversation(): BelongsTo
     {
-        return $this->belongsTo(Conversation::class, 'conversation_id');
+        return $this->belongsTo(Conversation::class);
     }
 
-    public function sender()
+    public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');
     }
 
-    public function repliedTo()
+    /** The message this is a reply to */
+    public function repliedTo(): BelongsTo
     {
         return $this->belongsTo(Message::class, 'replied_to_message_id');
     }
 
-    public function replies()
+    /** Replies to this message */
+    public function replies(): HasMany
     {
         return $this->hasMany(Message::class, 'replied_to_message_id');
     }
 
-    public function readReceipts()
+    public function readReceipts(): HasMany
     {
-        return $this->hasMany(MessageReadReceipt::class, 'message_id');
+        return $this->hasMany(MessageReadReceipt::class);
     }
 
-    public function reactions()
+    public function reactions(): HasMany
     {
-        return $this->hasMany(MessageReaction::class, 'message_id');
+        return $this->hasMany(MessageReaction::class);
     }
 
-    public function sharedFiles()
+    public function sharedFiles(): HasMany
     {
-        return $this->hasMany(SharedFile::class, 'message_id');
-    }
-
-    public function scopeInConversation($query, $conversationId)
-    {
-        return $query->where('conversation_id', $conversationId);
-    }
-
-    public function scopeFromSender($query, $senderId)
-    {
-        return $query->where('sender_id', $senderId);
-    }
-
-    public function scopePinned($query)
-    {
-        return $query->where('is_pinned', true);
-    }
-
-    public function scopeRecent($query)
-    {
-        return $query->orderBy('created_at', 'desc');
-    }
-
-    public function markAsRead($userId)
-    {
-        return MessageReadReceipt::firstOrCreate([
-            'message_id' => $this->id,
-            'user_id' => $userId
-        ]);
-    }
-
-    public function isReadBy($userId)
-    {
-        return $this->readReceipts()
-            ->where('user_id', $userId)
-            ->exists();
-    }
-
-    public function getReadCountAttribute()
-    {
-        return $this->readReceipts()->count();
-    }
-
-    public function getReactionSummaryAttribute()
-    {
-        return $this->reactions()
-            ->selectRaw('reaction, count(*) as count')
-            ->groupBy('reaction')
-            ->pluck('count', 'reaction')
-            ->toArray();
-    }
-
-    public function edit($newContent)
-    {
-        $this->content = $newContent;
-        $this->is_edited = true;
-        $this->updated_at = now();
-        $this->save();
-    }
-
-    public function pin()
-    {
-        $this->is_pinned = true;
-        $this->save();
-    }
-
-    public function unpin()
-    {
-        $this->is_pinned = false;
-        $this->save();
+        return $this->hasMany(SharedFile::class);
     }
 }

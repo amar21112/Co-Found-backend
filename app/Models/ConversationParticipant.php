@@ -3,92 +3,41 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ConversationParticipant extends Model
 {
-    use HasFactory, HasUuids;
+    use HasUuids;
 
-    protected $table = 'conversation_participants';
+    public $timestamps    = false;
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
-        'conversation_id',
-        'user_id',
-        'joined_at',
-        'left_at',
-        'is_admin',
-        'muted',
-        'muted_until'
+        'conversation_id', 'user_id',
+        'joined_at', 'left_at', 'is_admin', 'muted', 'muted_until',
     ];
 
     protected $casts = [
-        'joined_at' => 'datetime',
-        'left_at' => 'datetime',
-        'is_admin' => 'boolean',
-        'muted' => 'boolean',
-        'muted_until' => 'datetime'
+        'joined_at'  => 'datetime',
+        'left_at'    => 'datetime',
+        'muted_until'=> 'datetime',
+        'is_admin'   => 'boolean',
+        'muted'      => 'boolean',
     ];
 
-    public $timestamps = false;
-
-    public function conversation()
+    public function conversation(): BelongsTo
     {
-        return $this->belongsTo(Conversation::class, 'conversation_id');
+        return $this->belongsTo(Conversation::class);
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 
-    public function scopeActive($query)
-    {
-        return $query->whereNull('left_at');
-    }
-
-    public function scopeAdmins($query)
-    {
-        return $query->where('is_admin', true);
-    }
-
-    public function scopeMuted($query)
-    {
-        return $query->where('muted', true);
-    }
-
-    public function isActive()
-    {
-        return is_null($this->left_at);
-    }
-
-    public function isMuted()
-    {
-        if (!$this->muted) {
-            return false;
-        }
-
-        if ($this->muted_until && $this->muted_until < now()) {
-            return false;
-        }
-
-        return true;
-    }
-
-    public function mute($until = null)
-    {
-        $this->muted = true;
-        $this->muted_until = $until;
-        $this->save();
-    }
-
-    public function unmute()
-    {
-        $this->muted = false;
-        $this->muted_until = null;
-        $this->save();
-    }
+    public function isActive(): bool { return $this->left_at === null; }
+    public function isMuted(): bool  { return $this->muted && (!$this->muted_until || $this->muted_until->isFuture()); }
 }

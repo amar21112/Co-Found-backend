@@ -3,53 +3,47 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProjectRole extends Model
 {
-    use HasFactory, HasUuids;
+    use HasUuids;
 
-    protected $table = 'project_roles';
+    public $timestamps    = false;
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
-        'project_id',
-        'role_name',
-        'description',
-        'positions_needed',
-        'positions_filled'
+        'project_id', 'role_name', 'description',
+        'positions_needed', 'positions_filled',
     ];
 
     protected $casts = [
         'positions_needed' => 'integer',
-        'positions_filled' => 'integer'
+        'positions_filled' => 'integer',
+        'created_at'       => 'datetime',
     ];
 
-    public function project()
+    public function project(): BelongsTo
     {
-        return $this->belongsTo(Project::class, 'project_id');
+        return $this->belongsTo(Project::class);
     }
 
-    public function teamMembers()
-    {
-        return $this->hasMany(ProjectTeamMember::class, 'role_id');
-    }
-
-    public function applications()
+    public function applications(): HasMany
     {
         return $this->hasMany(ProjectApplication::class, 'role_id');
     }
 
-    public function getPositionsRemainingAttribute()
+    public function teamMembers(): HasMany
     {
-        return $this->positions_needed - $this->positions_filled;
+        return $this->hasMany(ProjectTeamMember::class, 'role_id');
     }
 
-    public function isFilled()
+    public function hasOpenPositions(): bool
     {
-        return $this->positions_filled >= $this->positions_needed;
+        return $this->positions_filled < $this->positions_needed;
     }
 }

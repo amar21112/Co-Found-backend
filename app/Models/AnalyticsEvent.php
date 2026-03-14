@@ -3,70 +3,30 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AnalyticsEvent extends Model
 {
-    use HasFactory, HasUuids;
+    use HasUuids;
 
-    protected $table = 'analytics_events';
+    public $timestamps    = false;
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
-        'event_type',
-        'user_id',
-        'session_id',
-        'properties',
-        'page_url',
-        'referrer_url',
-        'user_agent',
-        'ip_address'
+        'event_type', 'user_id', 'session_id', 'properties',
+        'page_url', 'referrer_url', 'user_agent', 'ip_address',
     ];
 
     protected $casts = [
-        'properties' => 'array'
+        'properties' => 'array',
+        'created_at' => 'datetime',
     ];
 
-    public function user()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
-    }
-
-    public function scopeByEventType($query, $eventType)
-    {
-        return $query->where('event_type', $eventType);
-    }
-
-    public function scopeByUser($query, $userId)
-    {
-        return $query->where('user_id', $userId);
-    }
-
-    public function scopeBySession($query, $sessionId)
-    {
-        return $query->where('session_id', $sessionId);
-    }
-
-    public function scopeToday($query)
-    {
-        return $query->whereDate('created_at', today());
-    }
-
-    public function scopeThisWeek($query)
-    {
-        return $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-    }
-
-    public function scopeThisMonth($query)
-    {
-        return $query->whereMonth('created_at', now()->month);
-    }
-
-    public function getProperty($key, $default = null)
-    {
-        return data_get($this->properties, $key, $default);
+        return $this->belongsTo(User::class);
     }
 }

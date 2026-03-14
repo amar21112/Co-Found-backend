@@ -5,191 +5,118 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Project extends Model
 {
-    use HasFactory, HasUuids, SoftDeletes;
+    use HasFactory, HasUuids;
 
-    protected $table = 'projects';
+    // NOTE: No SoftDeletes — deleted_at column does not exist in the schema.
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
-        'owner_id',
-        'title',
-        'slug',
-        'short_description',
-        'full_description',
-        'category',
-        'status',
-        'visibility',
-        'team_size_min',
-        'team_size_max',
-        'current_team_size',
-        'start_date',
-        'target_completion_date',
-        'actual_completion_date',
-        'is_accepting_applications',
-        'application_deadline',
-        'view_count',
-        'application_count',
-        'published_at',
-        'archived_at'
+        'owner_id', 'title', 'slug', 'short_description', 'full_description',
+        'category', 'status', 'visibility',
+        'team_size_min', 'team_size_max', 'current_team_size',
+        'start_date', 'target_completion_date', 'actual_completion_date',
+        'is_accepting_applications', 'application_deadline',
+        'view_count', 'application_count',
+        'published_at', 'archived_at',
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'target_completion_date' => 'date',
-        'actual_completion_date' => 'date',
-        'application_deadline' => 'date',
-        'is_accepting_applications' => 'boolean',
-        'view_count' => 'integer',
-        'application_count' => 'integer',
-        'published_at' => 'datetime',
-        'archived_at' => 'datetime'
+        'start_date'               => 'date',
+        'target_completion_date'   => 'date',
+        'actual_completion_date'   => 'date',
+        'application_deadline'     => 'date',
+        'is_accepting_applications'=> 'boolean',
+        'team_size_min'            => 'integer',
+        'team_size_max'            => 'integer',
+        'current_team_size'        => 'integer',
+        'view_count'               => 'integer',
+        'application_count'        => 'integer',
+        'published_at'             => 'datetime',
+        'archived_at'              => 'datetime',
     ];
 
-    public function owner()
+    // =========================================================================
+    // Relations
+    // =========================================================================
+
+    public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
     }
 
-    public function skills()
+    public function skills(): HasMany
     {
-        return $this->hasMany(ProjectSkill::class, 'project_id');
+        return $this->hasMany(ProjectSkill::class);
     }
 
-    public function roles()
+    public function roles(): HasMany
     {
-        return $this->hasMany(ProjectRole::class, 'project_id');
+        return $this->hasMany(ProjectRole::class);
     }
 
-    public function milestones()
+    public function milestones(): HasMany
     {
-        return $this->hasMany(ProjectMilestone::class, 'project_id')->orderBy('order_index');
+        return $this->hasMany(ProjectMilestone::class)->orderBy('order_index');
     }
 
-    public function teamMembers()
+    public function teamMembers(): HasMany
     {
-        return $this->hasMany(ProjectTeamMember::class, 'project_id');
+        return $this->hasMany(ProjectTeamMember::class);
     }
 
-    public function applications()
+    public function activeTeamMembers(): HasMany
     {
-        return $this->hasMany(ProjectApplication::class, 'project_id');
+        return $this->hasMany(ProjectTeamMember::class)->where('is_active', true);
     }
 
-    public function conversations()
+    public function applications(): HasMany
     {
-        return $this->hasMany(Conversation::class, 'project_id');
+        return $this->hasMany(ProjectApplication::class);
     }
 
-    public function videoCalls()
+    public function pendingApplications(): HasMany
     {
-        return $this->hasMany(VideoCall::class, 'project_id');
+        return $this->hasMany(ProjectApplication::class)->where('status', 'pending');
     }
 
-    public function collaborationInvitations()
+    public function conversations(): HasMany
     {
-        return $this->hasMany(CollaborationInvitation::class, 'project_id');
+        return $this->hasMany(Conversation::class);
     }
 
-    public function collaborationRatings()
+    public function invitations(): HasMany
     {
-        return $this->hasMany(CollaborationRating::class, 'project_id');
+        return $this->hasMany(CollaborationInvitation::class);
     }
 
-    public function matches()
+    public function matches(): HasMany
     {
         return $this->hasMany(MatchModel::class, 'matched_project_id');
     }
 
-    public function scopeActive($query)
+    public function ratings(): HasMany
     {
-        return $query->where('status', 'active');
+        return $this->hasMany(CollaborationRating::class);
     }
 
-    public function scopePlanning($query)
+    public function videoCalls(): HasMany
     {
-        return $query->where('status', 'planning');
+        return $this->hasMany(VideoCall::class);
     }
 
-    public function scopeCompleted($query)
-    {
-        return $query->where('status', 'completed');
-    }
+    // =========================================================================
+    // Helpers
+    // =========================================================================
 
-    public function scopePublic($query)
-    {
-        return $query->where('visibility', 'public');
-    }
-
-    public function scopeAcceptingApplications($query)
-    {
-        return $query->where('is_accepting_applications', true);
-    }
-
-    public function scopeByCategory($query, $category)
-    {
-        return $query->where('category', $category);
-    }
-
-    public function scopeByOwner($query, $ownerId)
-    {
-        return $query->where('owner_id', $ownerId);
-    }
-
-    public function scopeRecent($query)
-    {
-        return $query->orderBy('created_at', 'desc');
-    }
-
-    public function scopePopular($query)
-    {
-        return $query->orderBy('view_count', 'desc');
-    }
-
-    public function getTeamMembersCountAttribute()
-    {
-        return $this->teamMembers()->where('is_active', true)->count();
-    }
-
-    public function getOpenPositionsCountAttribute()
-    {
-        return $this->roles()->sum('positions_needed') - $this->roles()->sum('positions_filled');
-    }
-
-    public function getProgressPercentageAttribute()
-    {
-        $completed = $this->milestones()->where('status', 'completed')->count();
-        $total = $this->milestones()->count();
-
-        if ($total === 0) {
-            return 0;
-        }
-
-        return round(($completed / $total) * 100);
-    }
-
-    public function isOwner($userId)
-    {
-        return $this->owner_id === $userId;
-    }
-
-    public function isMember($userId)
-    {
-        return $this->teamMembers()
-            ->where('user_id', $userId)
-            ->where('is_active', true)
-            ->exists();
-    }
-
-    public function hasApplied($userId)
-    {
-        return $this->applications()
-            ->where('applicant_id', $userId)
-            ->exists();
-    }
+    public function isActive(): bool      { return $this->status === 'active'; }
+    public function isCompleted(): bool   { return $this->status === 'completed'; }
+    public function isPublic(): bool      { return $this->visibility === 'public'; }
+    public function isAcceptingApps(): bool { return (bool) $this->is_accepting_applications; }
 }

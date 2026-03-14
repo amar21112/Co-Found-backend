@@ -5,70 +5,34 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PortfolioItem extends Model
 {
     use HasFactory, HasUuids;
 
-    protected $table = 'portfolio_items';
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
-        'user_id',
-        'title',
-        'description',
-        'file_url',
-        'thumbnail_url',
-        'item_type',
-        'external_url',
-        'visibility',
-        'is_featured'
+        'user_id', 'title', 'description', 'file_url',
+        'thumbnail_url', 'item_type', 'external_url',
+        'visibility', 'is_featured',
     ];
 
     protected $casts = [
-        'is_featured' => 'boolean'
+        'is_featured' => 'boolean',
     ];
 
-    public function user()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class);
     }
 
-    public function skills()
+    public function skills(): HasMany
     {
-        return $this->hasMany(PortfolioSkill::class, 'portfolio_item_id');
-    }
-
-    public function scopePublic($query)
-    {
-        return $query->where('visibility', 'public');
-    }
-
-    public function scopeFeatured($query)
-    {
-        return $query->where('is_featured', true);
-    }
-
-    public function scopeByType($query, $type)
-    {
-        return $query->where('item_type', $type);
-    }
-
-    public function isVisibleTo($user)
-    {
-        if ($this->visibility === 'public') {
-            return true;
-        }
-
-        if ($this->visibility === 'connections' && $user) {
-            return $this->user->connections()
-                ->where('recipient_id', $user->id)
-                ->where('status', 'accepted')
-                ->exists();
-        }
-
-        return $this->visibility === 'private' && $user && $user->id === $this->user_id;
+        return $this->hasMany(PortfolioSkill::class);
     }
 }
