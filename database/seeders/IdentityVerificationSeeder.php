@@ -2,59 +2,51 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use App\Models\IdentityVerification;
 use App\Models\VerificationReview;
-use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class IdentityVerificationSeeder extends Seeder
 {
     public function run(): void
     {
-        $users = User::where('identity_verified', false)->get();
+        $regularUsers = User::where('role', 'regular_user')->inRandomOrder()->take(30)->get();
 
-        foreach ($users->random(min(30, $users->count())) as $user) {
-            $status = $this->getRandomStatus();
+        foreach ($regularUsers as $index => $user) {
+            if ($index < 12) {
+                // Verified submissions
+                $verification = IdentityVerification::factory()->verified()->create(['user_id' => $user->id]);
 
-            $verification = IdentityVerification::factory()
-                ->$status()
-                ->create(['user_id' => $user->id]);
+                VerificationReview::factory()->create([
+                    'verification_id' => $verification->id,
+                    'review_action'   => 'approved',
+                ]);
 
-            if (in_array($status, ['verified', 'rejected'])) {
-                $reviewer = User::where('role', 'moderator')->inRandomOrder()->first();
+                $user->update([
+                    'identity_verified'           => true,
+                    'identity_verification_level' => 'advanced',
+                ]);
 
-                if ($reviewer) {
-                    VerificationReview::factory()
-                        ->$status === 'verified' ? 'approved' : 'rejected'()
-                        ->create([
-                        'verification_id' => $verification->id,
-                        'reviewer_id' => $reviewer->id
-                    ]);
-                }
-            }
-        }
-    }
+            } elseif ($index < 20) {
+                // Rejected submissions
+                $verification = IdentityVerification::factory()->rejected()->create(['user_id' => $user->id]);
 
-    private function getRandomStatus()
-    {
-        $statuses = [
-            'pending' => 40,
-            'underReview' => 20,
-            'verified' => 25,
-            'rejected' => 10,
-            'escalated' => 5
-        ];
+                VerificationReview::factory()->create([
+                    'verification_id' => $verification->id,
+                    'review_action'   => 'rejected',
+                ]);
 
-        $rand = rand(1, 100);
-        $cumulative = 0;
+            } elseif ($index < 25) {
+                // Under review
+                IdentityVerification::factory()->underReview()->create(['user_id' => $user->id]);
 
-        foreach ($statuses as $status => $percentage) {
-            $cumulative += $percentage;
-            if ($rand <= $cumulative) {
-                return $status;
+            } else {
+                // Pending (just submitted, not yet reviewed)
+                IdentityVerification::factory()->create(['user_id' => $user->id]);
             }
         }
 
-        return 'pending';
+        $this->command->info('IdentityVerificationSeeder: 30 verification records seeded.');
     }
 }

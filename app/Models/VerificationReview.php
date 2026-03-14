@@ -14,7 +14,7 @@ class VerificationReview extends Model
     protected $primaryKey = 'id';
     public $incrementing = false;
     protected $keyType = 'string';
-
+    public $timestamps = false;
     protected $fillable = [
         'verification_id',
         'reviewer_id',

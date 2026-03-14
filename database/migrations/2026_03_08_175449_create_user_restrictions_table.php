@@ -13,7 +13,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('user_id');
             $table->uuid('restricted_by');
-            $table->enum('restriction_type', ['warning', 'suspension', 'ban', 'content_restriction']);
+            $table->enum('restriction_type', ['messaging_ban', 'posting_ban', 'application_ban', 'full_suspension']);
             $table->text('reason');
             $table->integer('duration_hours')->nullable();
             $table->timestamp('starts_at')->useCurrent();

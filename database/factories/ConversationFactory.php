@@ -6,7 +6,6 @@ use App\Models\Conversation;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 class ConversationFactory extends Factory
 {
@@ -14,50 +13,29 @@ class ConversationFactory extends Factory
 
     public function definition(): array
     {
-        $types = ['direct', 'group'];
+        $type = $this->faker->randomElement(['direct', 'group', 'project']);
 
         return [
-            'id' => Str::uuid(),
-            'conversation_type' => $this->faker->randomElement($types),
-            'title' => function (array $attributes) {
-                return $attributes['conversation_type'] === 'group'
-                    ? $this->faker->words(3, true)
-                    : null;
-            },
-            'project_id' => $this->faker->optional(0.3)->randomElement([Project::factory()]),
-            'created_by' => User::factory(),
-            'created_at' => $this->faker->dateTimeBetween('-6 months', 'now'),
-            'updated_at' => function (array $attributes) {
-                return $this->faker->dateTimeBetween($attributes['created_at'], 'now');
-            },
-            'last_message_at' => function (array $attributes) {
-                return $this->faker->optional(0.8)->dateTimeBetween($attributes['created_at'], 'now');
-            },
+            'id'                => $this->faker->uuid(),
+            'conversation_type' => $type,
+            'title'             => $type !== 'direct' ? $this->faker->words(3, true) : null,
+            'project_id'        => $type === 'project' ? Project::factory() : null,
+            'created_by'        => User::factory(),
+            'last_message_at'   => $this->faker->dateTimeBetween('-7 days', 'now'),
         ];
     }
 
     public function direct(): static
     {
-        return $this->state([
-            'conversation_type' => 'direct',
-            'title' => null,
-        ]);
+        return $this->state(fn() => ['conversation_type' => 'direct', 'title' => null, 'project_id' => null]);
     }
 
-    public function group(): static
+    public function project(): static
     {
-        return $this->state([
-            'conversation_type' => 'group',
-            'title' => $this->faker->words(3, true),
-        ]);
-    }
-
-    public function forProject(Project $project): static
-    {
-        return $this->state([
-            'project_id' => $project->id,
-            'conversation_type' => 'group',
-            'title' => $project->title . ' Chat',
+        return $this->state(fn() => [
+            'conversation_type' => 'project',
+            'title'             => $this->faker->words(3, true),
+            'project_id'        => Project::factory(),
         ]);
     }
 }

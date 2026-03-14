@@ -11,7 +11,7 @@ return new class extends Migration
     {
         Schema::create('conversations', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->enum('conversation_type', ['direct', 'group']);
+            $table->enum('conversation_type', ['direct', 'group' , 'project']);
             $table->string('title')->nullable();
             $table->uuid('project_id')->nullable();
             $table->uuid('created_by');

@@ -103,7 +103,7 @@ class Project extends Model
 
     public function matches()
     {
-        return $this->hasMany(Match::class, 'matched_project_id');
+        return $this->hasMany(MatchModel::class, 'matched_project_id');
     }
 
     public function scopeActive($query)

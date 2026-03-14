@@ -6,59 +6,33 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
+    /**
+     * Seed order matters — each seeder depends on records created by prior ones.
+     *
+     * 1. UserSeeder            → Creates all users (admins, mods, regulars)
+     * 2. IdentityVerificationSeeder → Requires users
+     * 3. ProjectSeeder         → Requires users; creates projects + team members + applications
+     * 4. CollaborationSeeder   → Requires users + projects
+     * 5. CommunicationSeeder   → Requires users + projects + team members
+     * 6. AdministrationSeeder  → Requires users; seeds system settings, reports, restrictions
+     */
     public function run(): void
     {
         $this->call([
-            // Authentication Module
             UserSeeder::class,
-            PasswordResetSeeder::class,
-            SessionSeeder::class,
             IdentityVerificationSeeder::class,
-            VerificationReviewSeeder::class,
-            VerificationAttemptSeeder::class,
-            UserSkillSeeder::class,
-            SkillEndorsementSeeder::class,
-            PortfolioItemSeeder::class,
-            PortfolioSkillSeeder::class,
-
-            // Project Management Module
             ProjectSeeder::class,
-            ProjectSkillSeeder::class,
-            ProjectRoleSeeder::class,
-            ProjectMilestoneSeeder::class,
-            ProjectTeamMemberSeeder::class,
-            ProjectApplicationSeeder::class,
-            ApplicationSkillSeeder::class,
-
-            // Collaboration Module
-            UserConnectionSeeder::class,
-            CollaborationInvitationSeeder::class,
-            MatchSeeder::class,
-            MatchFeedbackSeeder::class,
-            CollaborationRatingSeeder::class,
-
-            // Communication Module
-            ConversationSeeder::class,
-            ConversationParticipantSeeder::class,
-            MessageSeeder::class,
-            MessageReadReceiptSeeder::class,
-            MessageReactionSeeder::class,
-            FileSeeder::class,
-            SharedFileSeeder::class,
-            VideoCallSeeder::class,
-            CallParticipantSeeder::class,
-            NotificationSeeder::class,
-            NotificationPreferenceSeeder::class,
-
-            // Administration Module
-            AdminActionSeeder::class,
-            ReportSeeder::class,
-            ContentModerationSeeder::class,
-            UserRestrictionSeeder::class,
-            SystemLogSeeder::class,
-            AnalyticsEventSeeder::class,
-            SystemSettingSeeder::class,
-            ConfigurationHistorySeeder::class,
+            CollaborationSeeder::class,
+            CommunicationSeeder::class,
+            AdministrationSeeder::class,
         ]);
+
+        $this->command->info('');
+        $this->command->info('✅  Co-Found Platform database seeded successfully.');
+        $this->command->info('');
+        $this->command->info('  admin@cofound.io      / Admin@12345');
+        $this->command->info('  moderator@cofound.io  / Mod@12345');
+        $this->command->info('  demo@cofound.io       / Demo@12345');
+        $this->command->info('');
     }
 }

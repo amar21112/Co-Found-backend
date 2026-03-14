@@ -6,7 +6,6 @@ use App\Models\CollaborationInvitation;
 use App\Models\User;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 class CollaborationInvitationFactory extends Factory
 {
@@ -14,62 +13,20 @@ class CollaborationInvitationFactory extends Factory
 
     public function definition(): array
     {
-        $types = ['project_join', 'team_invite', 'collaboration_request', 'mentorship'];
-        $statuses = ['pending', 'accepted', 'declined', 'expired', 'withdrawn'];
+        $status = $this->faker->randomElement(['pending', 'accepted', 'rejected', 'expired']);
 
         return [
-            'id' => Str::uuid(),
-            'sender_id' => User::factory(),
-            'recipient_id' => User::factory(),
-            'project_id' => $this->faker->optional(0.5)->randomElement([Project::factory()]),
-            'invitation_type' => $this->faker->randomElement($types),
-            'role' => $this->faker->optional(0.7)->jobTitle(),
-            'message' => $this->faker->optional(0.8)->paragraph(),
-            'status' => $this->faker->randomElement($statuses),
-            'expires_at' => $this->faker->optional(0.7)->dateTimeBetween('+1 day', '+2 weeks'),
-            'responded_at' => function (array $attributes) {
-                return in_array($attributes['status'], ['accepted', 'declined'])
-                    ? $this->faker->dateTimeBetween('-2 weeks', 'now')
-                    : null;
-            },
-            'response_message' => function (array $attributes) {
-                return $attributes['responded_at'] ? $this->faker->optional(0.5)->sentence() : null;
-            },
-            'created_at' => $this->faker->dateTimeBetween('-3 months', 'now'),
+            'id'               => $this->faker->uuid(),
+            'sender_id'        => User::factory(),
+            'recipient_id'     => User::factory(),
+            'project_id'       => $this->faker->boolean(70) ? Project::factory() : null,
+            'invitation_type'  => $this->faker->randomElement(['project_join', 'team_invite', 'collaboration_request', 'mentorship']),
+            'role'             => $this->faker->randomElement(['Developer', 'Designer', 'CTO', 'CMO', 'Advisor', null]),
+            'message'          => $this->faker->paragraph(),
+            'status'           => $status,
+            'expires_at'       => $this->faker->dateTimeBetween('+1 day', '+30 days'),
+            'responded_at'     => in_array($status, ['accepted', 'rejected']) ? $this->faker->dateTimeBetween('-14 days', 'now') : null,
+            'response_message' => in_array($status, ['accepted', 'rejected']) ? $this->faker->sentence() : null,
         ];
-    }
-
-    public function pending(): static
-    {
-        return $this->state([
-            'status' => 'pending',
-            'responded_at' => null,
-            'response_message' => null,
-            'expires_at' => $this->faker->dateTimeBetween('+1 day', '+1 week'),
-        ]);
-    }
-
-    public function accepted(): static
-    {
-        return $this->state([
-            'status' => 'accepted',
-            'responded_at' => $this->faker->dateTimeBetween('-2 weeks', 'now'),
-        ]);
-    }
-
-    public function declined(): static
-    {
-        return $this->state([
-            'status' => 'declined',
-            'responded_at' => $this->faker->dateTimeBetween('-2 weeks', 'now'),
-        ]);
-    }
-
-    public function expired(): static
-    {
-        return $this->state([
-            'status' => 'expired',
-            'expires_at' => $this->faker->dateTimeBetween('-1 month', '-1 day'),
-        ]);
     }
 }

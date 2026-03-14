@@ -5,9 +5,7 @@ namespace Database\Factories;
 use App\Models\ProjectTeamMember;
 use App\Models\Project;
 use App\Models\User;
-use App\Models\ProjectRole;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 class ProjectTeamMemberFactory extends Factory
 {
@@ -15,42 +13,24 @@ class ProjectTeamMemberFactory extends Factory
 
     public function definition(): array
     {
-        $permissions = ['member', 'co-owner', 'owner', 'viewer'];
-        $positions = ['Developer', 'Designer', 'Project Manager', 'QA Engineer', 'DevOps Engineer'];
-
         return [
-            'id' => Str::uuid(),
-            'project_id' => Project::factory(),
-            'user_id' => User::factory(),
-            'role_id' => $this->faker->optional(0.7)->randomElement([ProjectRole::factory()]),
-            'position' => $this->faker->randomElement($positions),
-            'permissions' => $this->faker->randomElement($permissions),
-            'joined_at' => $this->faker->dateTimeBetween('-6 months', 'now'),
-            'left_at' => $this->faker->optional(0.1)->dateTimeBetween('-1 month', 'now'),
-            'is_active' => $this->faker->boolean(90),
+            'id'          => $this->faker->uuid(),
+            'project_id'  => Project::factory(),
+            'user_id'     => User::factory(),
+            'role_id'     => null,
+            'position'    => $this->faker->randomElement(['Lead Developer', 'Designer', 'Backend Engineer', 'Frontend Developer', 'DevOps', 'Product Manager']),
+            'permissions' => $this->faker->randomElement(['member', 'admin', 'owner']),
+            'joined_at'   => $this->faker->dateTimeBetween('-6 months', 'now'),
+            'left_at'     => null,
+            'is_active'   => true,
         ];
-    }
-
-    public function owner(): static
-    {
-        return $this->state([
-            'permissions' => 'owner',
-        ]);
-    }
-
-    public function active(): static
-    {
-        return $this->state([
-            'is_active' => true,
-            'left_at' => null,
-        ]);
     }
 
     public function inactive(): static
     {
-        return $this->state([
+        return $this->state(fn() => [
             'is_active' => false,
-            'left_at' => $this->faker->dateTimeBetween('-3 months', '-1 day'),
+            'left_at'   => $this->faker->dateTimeBetween('-3 months', 'now'),
         ]);
     }
 }

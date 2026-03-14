@@ -5,7 +5,6 @@ namespace Database\Factories;
 use App\Models\UserRestriction;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 class UserRestrictionFactory extends Factory
 {
@@ -13,80 +12,23 @@ class UserRestrictionFactory extends Factory
 
     public function definition(): array
     {
-        $types = ['warning', 'suspension', 'ban', 'content_restriction'];
-        $type = $this->faker->randomElement($types);
-
-        $startsAt = $this->faker->dateTimeBetween('-3 months', 'now');
-        $durationHours = $type === 'suspension' ? $this->faker->numberBetween(24, 168) : null;
-        $expiresAt = $durationHours ? (clone $startsAt)->modify("+{$durationHours} hours") : null;
+        $durationHours = $this->faker->randomElement([1, 6, 24, 72, 168, 720, null]);
+        $startsAt      = $this->faker->dateTimeBetween('-30 days', 'now');
+        $expiresAt     = $durationHours ? (clone $startsAt)->modify("+{$durationHours} hours") : null;
+        $isActive      = $expiresAt ? $expiresAt > now() : true;
 
         return [
-            'id' => Str::uuid(),
-            'user_id' => User::factory(),
-            'restricted_by' => User::factory(),
-            'restriction_type' => $type,
-            'reason' => $this->faker->paragraph(),
-            'duration_hours' => $durationHours,
-            'starts_at' => $startsAt,
-            'expires_at' => $expiresAt,
-            'is_active' => $expiresAt ? $expiresAt > now() : $this->faker->boolean(70),
-            'lifted_by' => $this->faker->optional(0.1)->randomElement([User::factory()]),
-            'lifted_at' => function (array $attributes) {
-                return $attributes['lifted_by'] ? $this->faker->dateTimeBetween($attributes['starts_at'], 'now') : null;
-            },
-            'created_at' => $startsAt,
+            'id'               => $this->faker->uuid(),
+            'user_id'          => User::factory(),
+            'restricted_by'    => User::factory()->moderator(),
+            'restriction_type' => $this->faker->randomElement(['messaging_ban', 'posting_ban', 'application_ban', 'full_suspension']),
+            'reason'           => $this->faker->sentence(),
+            'duration_hours'   => $durationHours,
+            'starts_at'        => $startsAt,
+            'expires_at'       => $expiresAt,
+            'is_active'        => $isActive,
+            'lifted_by'        => !$isActive && $this->faker->boolean(50) ? User::factory()->admin() : null,
+            'lifted_at'        => !$isActive && $this->faker->boolean(50) ? $this->faker->dateTimeBetween($startsAt, 'now') : null,
         ];
-    }
-
-    public function warning(): static
-    {
-        return $this->state([
-            'restriction_type' => 'warning',
-            'duration_hours' => null,
-            'expires_at' => null,
-        ]);
-    }
-
-    public function suspension(): static
-    {
-        $startsAt = $this->faker->dateTimeBetween('-1 month', 'now');
-        $durationHours = $this->faker->numberBetween(24, 168);
-        $expiresAt = (clone $startsAt)->modify("+{$durationHours} hours");
-
-        return $this->state([
-            'restriction_type' => 'suspension',
-            'duration_hours' => $durationHours,
-            'starts_at' => $startsAt,
-            'expires_at' => $expiresAt,
-            'is_active' => $expiresAt > now(),
-        ]);
-    }
-
-    public function ban(): static
-    {
-        return $this->state([
-            'restriction_type' => 'ban',
-            'duration_hours' => null,
-            'expires_at' => null,
-            'is_active' => true,
-        ]);
-    }
-
-    public function active(): static
-    {
-        return $this->state([
-            'is_active' => true,
-            'lifted_by' => null,
-            'lifted_at' => null,
-        ]);
-    }
-
-    public function lifted(): static
-    {
-        return $this->state([
-            'is_active' => false,
-            'lifted_by' => User::factory(),
-            'lifted_at' => $this->faker->dateTimeBetween('-1 month', 'now'),
-        ]);
     }
 }

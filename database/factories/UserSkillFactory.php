@@ -5,58 +5,28 @@ namespace Database\Factories;
 use App\Models\UserSkill;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 class UserSkillFactory extends Factory
 {
     protected $model = UserSkill::class;
 
+    protected static array $skills = [
+        'PHP', 'Laravel', 'JavaScript', 'TypeScript', 'React', 'Vue.js', 'Node.js',
+        'Python', 'Django', 'FastAPI', 'Java', 'Spring Boot', 'Go', 'Rust',
+        'MySQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Docker', 'Kubernetes',
+        'AWS', 'Azure', 'GCP', 'UI/UX Design', 'Figma', 'Product Management',
+        'Data Science', 'Machine Learning', 'DevOps', 'Blockchain', 'Swift', 'Kotlin',
+    ];
+
     public function definition(): array
     {
-        $skills = [
-            'PHP', 'Laravel', 'JavaScript', 'React', 'Vue.js', 'Python', 'Django',
-            'UI/UX Design', 'Figma', 'Adobe XD', 'Project Management', 'Agile',
-            'Digital Marketing', 'SEO', 'Content Writing', 'Data Analysis',
-            'Machine Learning', 'DevOps', 'AWS', 'Docker', 'Kubernetes',
-            'Node.js', 'TypeScript', 'GraphQL', 'PostgreSQL', 'MongoDB',
-            'Redis', 'Go', 'Rust', 'Swift', 'Kotlin', 'Flutter', 'React Native'
-        ];
-
-        $uuid = (String) Str::uuid();
         return [
-            'id' => $uuid,
-            'user_id' => User::factory(),
-            'skill_name' => $this->faker->randomElement($skills),
+            'id'                => $this->faker->uuid(),
+            'user_id'           => User::factory(),
+            'skill_name'        => $this->faker->randomElement(self::$skills),
             'proficiency_level' => $this->faker->numberBetween(1, 5),
-            'years_experience' => $this->faker->randomFloat(1, 0.5, 15),
-            'is_approved' => $this->faker->boolean(80),
-            'created_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
-            'updated_at' => function (array $attributes) {
-                return $this->faker->dateTimeBetween($attributes['created_at'], 'now');
-            },
+            'years_experience'  => $this->faker->randomFloat(1, 0.5, 15),
+            'is_approved'       => $this->faker->boolean(70),
         ];
-    }
-
-    public function approved(): static
-    {
-        return $this->state([
-            'is_approved' => true,
-        ]);
-    }
-
-    public function expert(): static
-    {
-        return $this->state([
-            'proficiency_level' => 5,
-            'years_experience' => $this->faker->numberBetween(5, 15),
-        ]);
-    }
-
-    public function beginner(): static
-    {
-        return $this->state([
-            'proficiency_level' => 1,
-            'years_experience' => $this->faker->randomFloat(1, 0, 1),
-        ]);
     }
 }
