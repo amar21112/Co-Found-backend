@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             CollaborationSeeder::class,
             CommunicationSeeder::class,
             AdministrationSeeder::class,
+            MissingTablesSeeder::class,
         ]);
 
         $this->command->info('');
