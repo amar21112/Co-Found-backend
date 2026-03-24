@@ -11,7 +11,6 @@ class CollaborationRating extends Model
 {
     use HasFactory, HasUuids;
 
-    public $timestamps    = false;
     protected $primaryKey = 'id';
     public $incrementing  = false;
     protected $keyType    = 'string';
@@ -30,7 +29,6 @@ class CollaborationRating extends Model
         'problem_solving_rating' => 'integer',
         'teamwork_rating'        => 'integer',
         'overall_rating'         => 'float',
-        'created_at'             => 'datetime',
     ];
 
     public function rater(): BelongsTo

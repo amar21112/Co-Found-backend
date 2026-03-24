@@ -11,10 +11,10 @@ class Notification extends Model
 {
     use HasFactory, HasUuids;
 
-    public $timestamps    = false;
+    public $timestamps = false;
     protected $primaryKey = 'id';
-    public $incrementing  = false;
-    protected $keyType    = 'string';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $fillable = [
         'user_id', 'type', 'title', 'body', 'data',
@@ -22,11 +22,11 @@ class Notification extends Model
     ];
 
     protected $casts = [
-        'data'         => 'array',
-        'read'         => 'boolean',
-        'read_at'      => 'datetime',
+        'data' => 'array',
+        'read' => 'boolean',
+        'read_at' => 'datetime',
         'delivered_at' => 'datetime',
-        'created_at'   => 'datetime',
+        'created_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -39,6 +39,12 @@ class Notification extends Model
         $this->update(['read' => true, 'read_at' => now()]);
     }
 
-    public function isUnread(): bool { return !$this->read; }
-    public function isHigh(): bool   { return $this->priority === 'high'; }
+    public function isUnread(): bool
+    {
+        return !$this->read;
+    }
+    public function isHigh(): bool
+    {
+        return $this->priority === 'high';
+    }
 }

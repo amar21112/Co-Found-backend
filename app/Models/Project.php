@@ -63,7 +63,7 @@ class Project extends Model
 
     public function milestones(): HasMany
     {
-        return $this->hasMany(ProjectMilestone::class)->orderBy('order_index');
+        return $this->hasMany(ProjectMilestone::class);
     }
 
     public function teamMembers(): HasMany

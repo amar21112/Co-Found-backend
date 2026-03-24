@@ -56,6 +56,6 @@ class MatchModel extends Model
     }
 
     public function isExpired(): bool      { return $this->expires_at?->isPast(); }
-    public function isUserMatch(): bool    { return $this->match_type === 'user_to_user'; }
-    public function isProjectMatch(): bool { return $this->match_type === 'user_to_project'; }
+    public function isUserMatch(): bool    { return $this->match_type === 'collaborator'; }
+    public function isProjectMatch(): bool { return $this->match_type === 'project'; }
 }

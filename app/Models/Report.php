@@ -50,5 +50,5 @@ class Report extends Model
 
     public function isPending(): bool    { return $this->status === 'pending'; }
     public function isResolved(): bool   { return $this->status === 'resolved'; }
-    public function isCritical(): bool   { return $this->priority === 'critical'; }
+    public function isHighPriority(): bool { return $this->priority === 'high'; }
 }
