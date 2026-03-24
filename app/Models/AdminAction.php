@@ -11,7 +11,6 @@ class AdminAction extends Model
 {
     use HasFactory, HasUuids;
 
-    public $timestamps    = false;
     protected $primaryKey = 'id';
     public $incrementing  = false;
     protected $keyType    = 'string';
@@ -22,8 +21,7 @@ class AdminAction extends Model
     ];
 
     protected $casts = [
-        'details'    => 'array',
-        'created_at' => 'datetime',
+        'details' => 'array',
     ];
 
     public function admin(): BelongsTo

@@ -11,7 +11,6 @@ class ProjectRole extends Model
 {
     use HasUuids;
 
-    public $timestamps    = false;
     protected $primaryKey = 'id';
     public $incrementing  = false;
     protected $keyType    = 'string';
@@ -24,7 +23,6 @@ class ProjectRole extends Model
     protected $casts = [
         'positions_needed' => 'integer',
         'positions_filled' => 'integer',
-        'created_at'       => 'datetime',
     ];
 
     public function project(): BelongsTo

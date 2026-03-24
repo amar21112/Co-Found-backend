@@ -12,10 +12,10 @@ class VideoCall extends Model
 {
     use HasFactory, HasUuids;
 
-    public $timestamps    = false;
+    public $timestamps = false;
     protected $primaryKey = 'id';
-    public $incrementing  = false;
-    protected $keyType    = 'string';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $fillable = [
         'call_type', 'conversation_id', 'project_id', 'initiated_by',
@@ -24,15 +24,15 @@ class VideoCall extends Model
     ];
 
     protected $casts = [
-        'start_time'       => 'datetime',
-        'end_time'         => 'datetime',
+        'start_time' => 'datetime',
+        'end_time' => 'datetime',
         'duration_seconds' => 'integer',
-        'created_at'       => 'datetime',
+        'created_at' => 'datetime',
     ];
 
     public function initiator(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'initiated_by');
+        return $this->belongsTo(User::class , 'initiated_by');
     }
 
     public function conversation(): BelongsTo
@@ -47,10 +47,19 @@ class VideoCall extends Model
 
     public function participants(): HasMany
     {
-        return $this->hasMany(CallParticipant::class, 'call_id');
+        return $this->hasMany(CallParticipant::class , 'call_id');
     }
 
-    public function isActive(): bool    { return $this->status === 'active'; }
-    public function isEnded(): bool     { return $this->status === 'ended'; }
-    public function isScheduled(): bool { return $this->status === 'scheduled'; }
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+    public function isEnded(): bool
+    {
+        return $this->status === 'ended';
+    }
+    public function isScheduled(): bool
+    {
+        return $this->status === 'scheduled';
+    }
 }

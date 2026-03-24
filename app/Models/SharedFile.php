@@ -10,7 +10,6 @@ class SharedFile extends Model
 {
     use HasUuids;
 
-    public $timestamps    = false;
     protected $primaryKey = 'id';
     public $incrementing  = false;
     protected $keyType    = 'string';
@@ -22,7 +21,6 @@ class SharedFile extends Model
 
     protected $casts = [
         'expires_at' => 'datetime',
-        'created_at' => 'datetime',
     ];
 
     public function file(): BelongsTo

@@ -10,7 +10,6 @@ class AnalyticsEvent extends Model
 {
     use HasUuids;
 
-    public $timestamps    = false;
     protected $primaryKey = 'id';
     public $incrementing  = false;
     protected $keyType    = 'string';
@@ -22,7 +21,6 @@ class AnalyticsEvent extends Model
 
     protected $casts = [
         'properties' => 'array',
-        'created_at' => 'datetime',
     ];
 
     public function user(): BelongsTo

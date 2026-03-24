@@ -11,7 +11,6 @@ class UserRestriction extends Model
 {
     use HasFactory, HasUuids;
 
-    public $timestamps    = false;
     protected $primaryKey = 'id';
     public $incrementing  = false;
     protected $keyType    = 'string';
@@ -28,7 +27,6 @@ class UserRestriction extends Model
         'lifted_at'      => 'datetime',
         'is_active'      => 'boolean',
         'duration_hours' => 'integer',
-        'created_at'     => 'datetime',
     ];
 
     public function user(): BelongsTo

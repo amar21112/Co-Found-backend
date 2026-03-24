@@ -10,10 +10,10 @@ class ContentModeration extends Model
 {
     use HasUuids;
 
-    public $timestamps    = false;
+    public $timestamps = false;
     protected $primaryKey = 'id';
-    public $incrementing  = false;
-    protected $keyType    = 'string';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $fillable = [
         'moderator_id', 'content_type', 'content_id',
@@ -25,6 +25,6 @@ class ContentModeration extends Model
 
     public function moderator(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'moderator_id');
+        return $this->belongsTo(User::class , 'moderator_id');
     }
 }

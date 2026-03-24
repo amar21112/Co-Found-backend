@@ -10,7 +10,6 @@ class ConfigurationHistory extends Model
 {
     use HasUuids;
 
-    public $timestamps    = false;
     protected $primaryKey = 'id';
     public $incrementing  = false;
     protected $keyType    = 'string';
@@ -21,9 +20,8 @@ class ConfigurationHistory extends Model
     ];
 
     protected $casts = [
-        'old_value'  => 'array',
-        'new_value'  => 'array',
-        'created_at' => 'datetime',
+        'old_value' => 'array',
+        'new_value' => 'array',
     ];
 
     public function changedBy(): BelongsTo

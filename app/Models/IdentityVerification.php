@@ -18,10 +18,10 @@ class IdentityVerification extends Model
 
     protected $fillable = [
         'user_id', 'id_card_image_front', 'id_card_image_back',
-        'id_card_type', 'id_card_number', 'full_name_on_card',
+        'id_card_number', 'full_name_on_card',
         'date_of_birth', 'nationality', 'expiry_date',
         'submission_method', 'ip_address', 'user_agent', 'device_info',
-        'liveness_check_passed', 'liveness_check_data',
+        'liveness_check_passed', 'liveness_check_data', 'face_match_score',
         'verification_status', 'rejection_reason',
     ];
 
@@ -30,7 +30,7 @@ class IdentityVerification extends Model
         'expiry_date'           => 'date',
         'liveness_check_passed' => 'boolean',
         'liveness_check_data'   => 'array',
-        'submitted_at'          => 'datetime',
+        'face_match_score'      => 'float',
     ];
 
     public function user(): BelongsTo

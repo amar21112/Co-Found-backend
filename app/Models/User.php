@@ -28,7 +28,7 @@ class User extends Authenticatable
     ];
 
     protected $hidden = [
-        'password_hash', 'email_verification_token',
+        'password', 'email_verification_token',
         'remember_token',
     ];
 
@@ -41,10 +41,10 @@ class User extends Authenticatable
         'login_attempts'            => 'integer',
     ];
 
-    // ── Auth override (column is password_hash, not password) ────────────
+    // ── Auth override ────────────────────────────────────────────────────────
     public function getAuthPassword(): string
     {
-        return $this->password_hash;
+        return $this->password;
     }
 
     // =========================================================================
@@ -295,12 +295,12 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->role === 'administrator';
     }
 
     public function isModerator(): bool
     {
-        return in_array($this->role, ['admin', 'moderator']);
+        return in_array($this->role, ['administrator', 'moderator']);
     }
 
     public function isActive(): bool

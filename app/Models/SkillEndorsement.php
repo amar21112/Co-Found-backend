@@ -11,7 +11,6 @@ class SkillEndorsement extends Model
 {
     use HasFactory, HasUuids;
 
-    public $timestamps    = false;
     protected $primaryKey = 'id';
     public $incrementing  = false;
     protected $keyType    = 'string';
@@ -20,9 +19,6 @@ class SkillEndorsement extends Model
         'user_skill_id', 'endorsed_by_user_id',
     ];
 
-    protected $casts = [
-        'created_at' => 'datetime',
-    ];
 
     public function userSkill(): BelongsTo
     {
