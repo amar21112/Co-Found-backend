@@ -1,0 +1,19 @@
+<?php
+
+namespace App\Http\Requests\Project;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class UpdateProjectRoleRequest extends FormRequest
+{
+    public function authorize(): bool { return true; }
+
+    public function rules(): array
+    {
+        return [
+            'role_name'        => 'sometimes|string|max:100',
+            'description'      => 'sometimes|nullable|string',
+            'positions_needed' => 'sometimes|integer|min:1',
+        ];
+    }
+}
