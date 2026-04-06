@@ -8,7 +8,7 @@ trait ResolvesUser
             return auth()->user();
         }
 
-         return \App\Models\User::find($request->user_id ?? 1);
+        return \App\Models\User::find($request->user_id ?? 1);
     }
 }
 /*
