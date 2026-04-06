@@ -20,7 +20,7 @@ class ProjectRoleRepository implements ProjectRoleRepositoryInterface
 
     public function create(string $projectId, array $data): ProjectRole
     {
-        return ProjectRole::create(array_merge($data, ['project_id' => $projectId]));
+        return ProjectRole::create(array_merge($data, ['project_id' => $projectId,'positions_filled' => 0]));
     }
 
     public function update(ProjectRole $role, array $data): ProjectRole

@@ -33,7 +33,7 @@ class ProjectTeamService
         return $this->teamRepo->updateMember($member, $data);
     }
 
-    public function removeMember(Project $project, string $userId, User $actor): void
+    public function removeMember(Project $project, string $userId): void
     {
         if ($userId === $project->owner_id) {
             throw new ProjectException('The project owner cannot be removed from the team.', 422);

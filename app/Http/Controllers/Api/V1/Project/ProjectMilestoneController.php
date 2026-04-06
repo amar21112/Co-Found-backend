@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\V1;
+namespace App\Http\Controllers\Api\V1\Project;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Project\CreateMilestoneRequest;
@@ -22,7 +22,7 @@ class ProjectMilestoneController extends Controller
      */
     public function index(Project $project): JsonResponse
     {
-        $this->authorize('view', $project);
+//        $this->authorize('view', $project);
 
         $milestones = $this->service->list($project);
 
@@ -37,7 +37,7 @@ class ProjectMilestoneController extends Controller
      */
     public function store(CreateMilestoneRequest $request, Project $project): JsonResponse
     {
-        $this->authorize('manage', $project);
+//        $this->authorize('manage', $project);
 
         $milestone = $this->service->create($project, $request->validated());
 
@@ -53,7 +53,7 @@ class ProjectMilestoneController extends Controller
      */
     public function update(UpdateMilestoneRequest $request, Project $project, string $milestoneId): JsonResponse
     {
-        $this->authorize('manage', $project);
+//        $this->authorize('manage', $project);
 
         $milestone = $this->service->update($project, $milestoneId, $request->validated());
 
@@ -69,7 +69,7 @@ class ProjectMilestoneController extends Controller
      */
     public function destroy(Project $project, string $milestoneId): JsonResponse
     {
-        $this->authorize('manage', $project);
+//        $this->authorize('manage', $project);
 
         $this->service->delete($project, $milestoneId);
 

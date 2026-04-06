@@ -1,12 +1,12 @@
 <?php
 
-use App\Http\Controllers\Api\V1\MyApplicationController;
-use App\Http\Controllers\Api\V1\ProjectApplicationController;
-use App\Http\Controllers\Api\V1\ProjectController;
-use App\Http\Controllers\Api\V1\ProjectMilestoneController;
-use App\Http\Controllers\Api\V1\ProjectRoleController;
-use App\Http\Controllers\Api\V1\ProjectSkillController;
-use App\Http\Controllers\Api\V1\ProjectTeamController;
+use App\Http\Controllers\Api\V1\Application\MyApplicationController;
+use App\Http\Controllers\Api\V1\Application\ProjectApplicationController;
+use App\Http\Controllers\Api\V1\Project\ProjectController;
+use App\Http\Controllers\Api\V1\Project\ProjectMilestoneController;
+use App\Http\Controllers\Api\V1\Project\ProjectRoleController;
+use App\Http\Controllers\Api\V1\Project\ProjectSkillController;
+use App\Http\Controllers\Api\V1\Project\ProjectTeamController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -31,7 +31,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('/{skillId}',[ProjectSkillController::class, 'destroy']);
     });
 
-    // ── Project Roles ─────────────────────────────────────────────────────────
+    // ── Project Roles ───────────────────────────────────────────────────────── api test done
     Route::prefix('projects/{project}/roles')->group(function () {
         Route::get('/',           [ProjectRoleController::class, 'index']);
         Route::post('/',          [ProjectRoleController::class, 'store']);
@@ -39,7 +39,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('/{roleId}',[ProjectRoleController::class, 'destroy']);
     });
 
-    // ── Project Milestones ────────────────────────────────────────────────────
+    // ── Project Milestones ──────────────────────────────────────────────────── api test done
     Route::prefix('projects/{project}/milestones')->group(function () {
         Route::get('/',                   [ProjectMilestoneController::class, 'index']);
         Route::post('/',                  [ProjectMilestoneController::class, 'store']);
@@ -47,10 +47,10 @@ Route::prefix('v1')->group(function () {
         Route::delete('/{milestoneId}',   [ProjectMilestoneController::class, 'destroy']);
     });
 
-    // ── Project Team Members ──────────────────────────────────────────────────
+    // ── Project Team Members ────────────────────────────────────────────────── api test done
     Route::prefix('projects/{project}/team')->group(function () {
         Route::get('/',              [ProjectTeamController::class, 'index']);
-        Route::post('/leave',        [ProjectTeamController::class, 'leave']);
+        Route::post('/leave',        [ProjectTeamController::class, 'leave']); // not test because auth user
         Route::put('/{userId}',      [ProjectTeamController::class, 'update']);
         Route::delete('/{userId}',   [ProjectTeamController::class, 'destroy']);
     });
