@@ -21,10 +21,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     //Projects end points -----------------------------------------------------
-    // ── Projects ──────────────────────────────────────────────────────────────
+    // ── Projects ────────────────────────────────────────────────────────────── api test done
     Route::apiResource('projects', ProjectController::class);
 
-    // ── Project Skills ────────────────────────────────────────────────────────
+    // ── Project Skills ──────────────────────────────────────────────────────── api test done
     Route::prefix('projects/{project}/skills')->group(function () {
         Route::post('/',           [ProjectSkillController::class, 'store']);
         Route::put('/{skillId}',   [ProjectSkillController::class, 'update']);

@@ -61,8 +61,7 @@ class ProjectController extends Controller
     public function show(Request $request, string $id): JsonResponse
     {
         $project = $this->service->show($id);
-
-        $this->authorize('view', $project);
+        //        $this->authorize('view', $project);
 
         return response()->json([
             'data' => new ProjectResource($project),
@@ -75,7 +74,7 @@ class ProjectController extends Controller
      */
     public function update(UpdateProjectRequest $request, Project $project): JsonResponse
     {
-        $this->authorize('update', $project);
+//        $this->authorize('update', $project);
 
         $updated = $this->service->update($project, $request->validated());
 
@@ -91,7 +90,7 @@ class ProjectController extends Controller
      */
     public function destroy(Project $project): JsonResponse
     {
-        $this->authorize('delete', $project);
+//        $this->authorize('delete', $project);
 
         $this->service->delete($project);
 

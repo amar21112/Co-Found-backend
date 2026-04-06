@@ -37,7 +37,8 @@ class ProjectRepository implements ProjectRepositoryInterface
         }
 
         if (isset($filters['accepting_applications'])) {
-            $query->where('is_accepting_applications', (bool) $filters['accepting_applications']);
+           $filter_for =  (bool) $filters['accepting_applications'];
+            $query->where('is_accepting_applications', $filter_for );
         }
 
         // Only public projects for the public listing
