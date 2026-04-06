@@ -13,8 +13,6 @@ class RouteServiceProvider extends ServiceProvider
     /**
      * The path to the "home" route for your application.
      *
-     * Typically, users are redirected here after authentication.
-     *
      * @var string
      */
     public const HOME = '/home';
@@ -27,10 +25,17 @@ class RouteServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
 
         $this->routes(function () {
+            // Core API routes
             Route::middleware('api')
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
 
+            // Profile module routes
+            Route::middleware('api')
+                ->prefix('api')
+                ->group(base_path('routes/profile.php'));
+
+            // Web routes
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
         });
