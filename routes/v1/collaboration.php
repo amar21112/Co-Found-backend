@@ -8,12 +8,8 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Collaboration Routes
+| Collaboration Routes — v1
 |--------------------------------------------------------------------------
-|
-| Connections, Invitations, Matches, Ratings.
-| All routes are prefixed with /api (via RouteServiceProvider).
-|
 */
 
 Route::middleware('api')->group(function () {
@@ -21,36 +17,37 @@ Route::middleware('api')->group(function () {
     // ── Connections ───────────────────────────────────────────────────────────
 
     Route::prefix('connections')->group(function () {
-        Route::get('/',                          [ConnectionController::class, 'index']);   // list accepted connections
-        Route::post('/',                         [ConnectionController::class, 'store']);   // send connection request
-        Route::patch('/{connection}/accept',     [ConnectionController::class, 'accept']);  // accept request
-        Route::delete('/{connection}',           [ConnectionController::class, 'destroy']); // remove connection
+        Route::get('/',                        [ConnectionController::class, 'index']);   // list (filterable)
+        Route::post('/',                       [ConnectionController::class, 'store']);   // send request
+        Route::patch('/{connection}/accept',   [ConnectionController::class, 'accept']);  // accept (recipient only)
+        Route::patch('/{connection}/reject',   [ConnectionController::class, 'reject']);  // reject → auto-deletes (recipient only)
+        Route::patch('/{connection}/block',    [ConnectionController::class, 'block']);   // block (either party)
+        Route::delete('/{connection}',         [ConnectionController::class, 'destroy']); // remove
     });
 
     // ── Invitations ───────────────────────────────────────────────────────────
 
     Route::prefix('invitations')->group(function () {
-        Route::get('/',                           [InvitationController::class, 'index']);    // list sent + received
-        Route::post('/',                          [InvitationController::class, 'store']);    // send invitation
+        Route::get('/',                           [InvitationController::class, 'index']);    // list (filterable)
+        Route::post('/',                          [InvitationController::class, 'store']);    // send
         Route::patch('/{invitation}/respond',     [InvitationController::class, 'respond']);  // accept or decline
-        Route::patch('/{invitation}/withdraw',    [InvitationController::class, 'withdraw']); // withdraw sent invitation
+        Route::patch('/{invitation}/withdraw',    [InvitationController::class, 'withdraw']); // withdraw (sender only)
     });
 
     // ── Matches ───────────────────────────────────────────────────────────────
 
     Route::prefix('matches')->group(function () {
-        Route::get('/',                        [MatchController::class, 'index']);       // list matches
-        Route::patch('/{match}/view',          [MatchController::class, 'markViewed']); // mark as viewed
-        Route::patch('/{match}/save',          [MatchController::class, 'save']);        // save / unsave
-        Route::post('/{match}/feedback',       [MatchController::class, 'feedback']);    // submit feedback
+        Route::get('/',                    [MatchController::class, 'index']);       // list (filterable)
+        Route::patch('/{match}/view',      [MatchController::class, 'markViewed']); // mark viewed
+        Route::patch('/{match}/save',      [MatchController::class, 'save']);        // toggle save
+        Route::post('/{match}/feedback',   [MatchController::class, 'feedback']);    // submit feedback
     });
 
     // ── Ratings ───────────────────────────────────────────────────────────────
 
-    Route::post('ratings',                     [RatingController::class, 'store']);    // rate a collaborator
-    Route::put('ratings/{rating}',             [RatingController::class, 'update']);   // update own rating
-    Route::delete('ratings/{rating}',          [RatingController::class, 'destroy']);  // delete own rating
+    Route::post('ratings',             [RatingController::class, 'store']);   // rate a collaborator
+    Route::put('ratings/{rating}',     [RatingController::class, 'update']);  // update own rating
+    Route::delete('ratings/{rating}',  [RatingController::class, 'destroy']); // delete own rating
 
-    // View ratings received by any user
-    Route::get('users/{user}/ratings',         [RatingController::class, 'index']);
+    Route::get('users/{user}/ratings', [RatingController::class, 'index']);   // view ratings received by user
 });

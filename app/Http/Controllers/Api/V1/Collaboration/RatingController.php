@@ -19,18 +19,11 @@ class RatingController extends Controller
 
     public function __construct(private readonly RatingService $ratingService) {}
 
-    // =========================================================================
-    // GET /api/users/{user}/ratings
-    // =========================================================================
-
-    /**
-     * List ratings received by a specific user.
-     * Non-owners only see public ratings.
-     */
+    // GET /api/v1/users/{user}/ratings
     public function index(Request $request, User $user): JsonResponse
     {
         $viewer  = $this->resolveUser($request);
-        $ratings = $this->ratingService->list($viewer, $user);
+        $ratings = $this->ratingService->list($viewer, $user, $request->query());
 
         return response()->json([
             'status' => 'success',
@@ -38,13 +31,7 @@ class RatingController extends Controller
         ]);
     }
 
-    // =========================================================================
-    // POST /api/ratings
-    // =========================================================================
-
-    /**
-     * Rate a collaborator.
-     */
+    // POST /api/v1/ratings
     public function store(StoreRatingRequest $request): JsonResponse
     {
         $rater  = $this->resolveUser($request);
@@ -53,19 +40,11 @@ class RatingController extends Controller
         return response()->json([
             'status'  => 'success',
             'message' => 'Rating submitted successfully.',
-            'data'    => new RatingResource(
-                $rating->load(['rater', 'ratedUser', 'project'])
-            ),
+            'data'    => new RatingResource($rating->load(['rater', 'ratedUser', 'project'])),
         ], 201);
     }
 
-    // =========================================================================
-    // PUT /api/ratings/{rating}
-    // =========================================================================
-
-    /**
-     * Update an existing rating.
-     */
+    // PUT /api/v1/ratings/{rating}
     public function update(UpdateRatingRequest $request, CollaborationRating $rating): JsonResponse
     {
         $rater   = $this->resolveUser($request);
@@ -78,13 +57,7 @@ class RatingController extends Controller
         ]);
     }
 
-    // =========================================================================
-    // DELETE /api/ratings/{rating}
-    // =========================================================================
-
-    /**
-     * Delete a rating you submitted.
-     */
+    // DELETE /api/v1/ratings/{rating}
     public function destroy(Request $request, CollaborationRating $rating): JsonResponse
     {
         $rater = $this->resolveUser($request);

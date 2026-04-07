@@ -5,17 +5,44 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\UserSkill;
 use App\Models\SkillEndorsement;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
 
 class SkillService
 {
     /**
-     * List all skills for a user, with endorsement counts.
+     * List skills for a user.
+     *
+     * Filters  : search (skill_name), proficiency_level, is_approved
+     * Sort     : sort_by (skill_name | proficiency_level | years_experience | created_at),
+     *            sort_dir (asc | desc)
      */
-    public function listSkills(User $user): \Illuminate\Database\Eloquent\Collection
+    public function listSkills(User $user, array $filters = []): Collection
     {
-        return $user->skills()->with(['endorsements.endorser'])->get();
+        $query = $user->skills()->with(['endorsements.endorser']);
+
+        // Search by skill name
+        if (! empty($filters['search'])) {
+            $query->where('skill_name', 'LIKE', '%' . $filters['search'] . '%');
+        }
+
+        // Filter by exact proficiency level (1–5)
+        if (isset($filters['proficiency_level']) && $filters['proficiency_level'] !== '') {
+            $query->where('proficiency_level', (int) $filters['proficiency_level']);
+        }
+
+        // Filter by approval status
+        if (isset($filters['is_approved']) && $filters['is_approved'] !== '') {
+            $query->where('is_approved', filter_var($filters['is_approved'], FILTER_VALIDATE_BOOLEAN));
+        }
+
+        // Sorting — whitelist allowed columns
+        $allowed = ['skill_name', 'proficiency_level', 'years_experience', 'created_at'];
+        $sortBy  = in_array($filters['sort_by'] ?? '', $allowed) ? $filters['sort_by'] : 'created_at';
+        $sortDir = ($filters['sort_dir'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($sortBy, $sortDir);
+
+        return $query->get();
     }
 
     /**
@@ -35,13 +62,13 @@ class SkillService
             ]);
         }
 
+        $data['is_approved'] = true;
+
         return $user->skills()->create($data);
     }
 
     /**
      * Update an owned skill.
-     *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     public function update(User $user, UserSkill $skill, array $data): UserSkill
     {
@@ -52,8 +79,6 @@ class SkillService
 
     /**
      * Delete an owned skill along with its endorsements.
-     *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
      */
     public function delete(User $user, UserSkill $skill): void
     {
@@ -63,8 +88,7 @@ class SkillService
     }
 
     /**
-     * Endorse a skill. A user cannot endorse their own skill,
-     * and can only endorse each skill once.
+     * Endorse a skill.
      *
      * @throws ValidationException
      */
@@ -91,7 +115,7 @@ class SkillService
             'endorsed_by_user_id' => $endorser->id,
         ]);
 
-        // Auto-approve if endorsements reach 5 or more
+        // Auto-approve when endorsements reach 5+
         if (! $skill->is_approved) {
             $count = SkillEndorsement::where('user_skill_id', $skill->id)->count();
             if ($count >= 5) {
@@ -120,11 +144,6 @@ class SkillService
         }
     }
 
-    // ── Private helpers ──────────────────────────────────────────────────────
-
-    /**
-     * @throws \Illuminate\Auth\Access\AuthorizationException
-     */
     private function authorizeOwnership(User $user, UserSkill $skill): void
     {
         if ($skill->user_id !== $user->id) {

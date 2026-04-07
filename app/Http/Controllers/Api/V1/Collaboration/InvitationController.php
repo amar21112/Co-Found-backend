@@ -18,17 +18,11 @@ class InvitationController extends Controller
 
     public function __construct(private readonly InvitationService $invitationService) {}
 
-    // =========================================================================
-    // GET /api/invitations
-    // =========================================================================
-
-    /**
-     * List all sent and received invitations for the authenticated user.
-     */
+    // GET /api/v1/invitations
     public function index(Request $request): JsonResponse
     {
         $user = $this->resolveUser($request);
-        ['sent' => $sent, 'received' => $received] = $this->invitationService->list($user);
+        ['sent' => $sent, 'received' => $received] = $this->invitationService->list($user, $request->query());
 
         return response()->json([
             'status' => 'success',
@@ -38,14 +32,9 @@ class InvitationController extends Controller
             ],
         ]);
     }
+    
 
-    // =========================================================================
-    // POST /api/invitations
-    // =========================================================================
-
-    /**
-     * Send a new invitation.
-     */
+    // POST /api/v1/invitations
     public function store(SendInvitationRequest $request): JsonResponse
     {
         $user       = $this->resolveUser($request);
@@ -60,13 +49,7 @@ class InvitationController extends Controller
         ], 201);
     }
 
-    // =========================================================================
-    // PATCH /api/invitations/{invitation}/respond
-    // =========================================================================
-
-    /**
-     * Respond to a received invitation (accept or decline).
-     */
+    // PATCH /api/v1/invitations/{invitation}/respond
     public function respond(RespondInvitationRequest $request, CollaborationInvitation $invitation): JsonResponse
     {
         $user       = $this->resolveUser($request);
@@ -79,13 +62,7 @@ class InvitationController extends Controller
         ]);
     }
 
-    // =========================================================================
-    // PATCH /api/invitations/{invitation}/withdraw
-    // =========================================================================
-
-    /**
-     * Withdraw a sent pending invitation.
-     */
+    // PATCH /api/v1/invitations/{invitation}/withdraw
     public function withdraw(Request $request, CollaborationInvitation $invitation): JsonResponse
     {
         $user = $this->resolveUser($request);

@@ -18,86 +18,51 @@ class ProfileController extends Controller
 
     public function __construct(private readonly ProfileService $profileService) {}
 
-    // =========================================================================
-    // GET /api/profile
-    // =========================================================================
-
-    /**
-     * Return the authenticated user's own profile with skills and portfolio.
-     */
+    // GET /api/v1/profile
     public function show(Request $request): JsonResponse
     {
         $user = $this->resolveUser($request);
-
-        $user->load([
-            'skills.endorsements.endorser',
-            'portfolioItems.skills',
-        ]);
-
-        return response()->json([
-            'status' => 'success',
-            'data'   => new UserResource($user),
-        ]);
+        $user->load(['skills.endorsements.endorser', 'portfolioItems.skills']);
+        return response()->json(['status' => 'success', 'data' => new UserResource($user)]);
     }
 
-    // =========================================================================
-    // PUT /api/profile
-    // =========================================================================
-
-    /**
-     * Update the authenticated user's profile.
-     */
+    // PUT /api/v1/profile
     public function update(UpdateProfileRequest $request): JsonResponse
     {
         $user    = $this->resolveUser($request);
         $updated = $this->profileService->updateProfile($user, $request->validated());
-
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Profile updated successfully.',
-            'data'    => new UserResource($updated),
-        ]);
+        return response()->json(['status' => 'success', 'message' => 'Profile updated successfully.', 'data' => new UserResource($updated)]);
     }
 
-    // =========================================================================
-    // POST /api/profile/change-password
-    // =========================================================================
-
-    /**
-     * Change the authenticated user's password.
-     */
+    // POST /api/v1/profile/change-password
     public function changePassword(ChangePasswordRequest $request): JsonResponse
     {
         $user = $this->resolveUser($request);
+        $this->profileService->changePassword($user, $request->validated('current_password'), $request->validated('password'));
+        return response()->json(['status' => 'success', 'message' => 'Password changed successfully.']);
+    }
 
-        $this->profileService->changePassword(
-            $user,
-            $request->validated('current_password'),
-            $request->validated('password'),
-        );
-
+    // GET /api/v1/users — searchable directory
+    public function index(Request $request): JsonResponse
+    {
+        $users = $this->profileService->searchUsers($request->query());
         return response()->json([
-            'status'  => 'success',
-            'message' => 'Password changed successfully.',
+            'status' => 'success',
+            'data'   => UserResource::collection($users->items()),
+            'meta'   => [
+                'current_page' => $users->currentPage(),
+                'per_page'     => $users->perPage(),
+                'total'        => $users->total(),
+                'last_page'    => $users->lastPage(),
+            ],
         ]);
     }
 
-    // =========================================================================
-    // GET /api/users/{user}
-    // =========================================================================
-
-    /**
-     * View any user's public profile.
-     * The authenticated user's visibility rules apply to portfolio items.
-     */
+    // GET /api/v1/users/{user}
     public function showUser(Request $request, User $user): JsonResponse
     {
         $viewer  = $this->resolveUser($request);
         $profile = $this->profileService->getPublicProfile($viewer, $user);
-
-        return response()->json([
-            'status' => 'success',
-            'data'   => new UserResource($profile),
-        ]);
+        return response()->json(['status' => 'success', 'data' => new UserResource($profile)]);
     }
 }

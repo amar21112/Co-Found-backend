@@ -4,31 +4,54 @@ namespace App\Services;
 
 use App\Models\CollaborationRating;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
 
 class RatingService
 {
     /**
-     * List all ratings received by a user.
+     * List ratings received by a user.
+     *
      * Non-owners only see public ratings.
+     *
+     * Filters  : min_overall (minimum overall_rating, e.g. 3.5),
+     *            project_id (filter by a specific project)
+     * Sort     : sort_by (overall_rating | created_at), sort_dir (asc | desc)
+     * Paginate : per_page (default 15, max 50)
      */
-    public function list(User $viewer, User $target): Collection
+    public function list(User $viewer, User $target, array $filters = []): LengthAwarePaginator
     {
         $query = CollaborationRating::where('rated_user_id', $target->id)
             ->with(['rater', 'ratedUser', 'project']);
 
+        // Non-owners only see public ratings
         if ($viewer->id !== $target->id) {
             $query->where('visibility', 'public');
         }
 
-        return $query->latest()->get();
+        // Filter by minimum overall rating
+        if (isset($filters['min_overall']) && $filters['min_overall'] !== '') {
+            $query->where('overall_rating', '>=', (float) $filters['min_overall']);
+        }
+
+        // Filter by project
+        if (! empty($filters['project_id'])) {
+            $query->where('project_id', $filters['project_id']);
+        }
+
+        // Sorting
+        $allowed = ['overall_rating', 'created_at'];
+        $sortBy  = in_array($filters['sort_by'] ?? '', $allowed) ? $filters['sort_by'] : 'created_at';
+        $sortDir = ($filters['sort_dir'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($sortBy, $sortDir);
+
+        $perPage = min((int) ($filters['per_page'] ?? 15), 50);
+
+        return $query->paginate($perPage);
     }
 
     /**
      * Rate a collaborator.
-     * A user cannot rate themselves.
-     * A user can only rate the same person once per project.
      *
      * @throws ValidationException
      */
@@ -66,7 +89,6 @@ class RatingService
     {
         $this->authorizeOwnership($rater, $rating);
 
-        // Recompute overall with merged values
         $merged = array_merge($rating->toArray(), $data);
         $data['overall_rating'] = $this->computeOverall($merged);
 
@@ -84,11 +106,6 @@ class RatingService
         $rating->delete();
     }
 
-    // ── Private helpers ──────────────────────────────────────────────────────
-
-    /**
-     * Compute the overall rating as the average of provided sub-ratings.
-     */
     private function computeOverall(array $data): ?float
     {
         $fields = [
@@ -104,11 +121,7 @@ class RatingService
             ->filter(fn($v) => ! is_null($v))
             ->values();
 
-        if ($values->isEmpty()) {
-            return null;
-        }
-
-        return round($values->avg(), 2);
+        return $values->isEmpty() ? null : round($values->avg(), 2);
     }
 
     private function authorizeOwnership(User $rater, CollaborationRating $rating): void
