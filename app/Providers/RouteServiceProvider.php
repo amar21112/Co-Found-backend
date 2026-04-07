@@ -23,8 +23,8 @@ class RouteServiceProvider extends ServiceProvider
                 ->group(base_path('routes/api.php'));
 
             // Profile module
-            Route::middleware('api/v1')
-                ->prefix('api')
+            Route::middleware('api')
+                ->prefix('api/v1')
                 ->group(base_path('routes/v1/profile.php'));
 
             // Collaboration module
