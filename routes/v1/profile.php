@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\Api\Profile\PortfolioController;
-use App\Http\Controllers\Api\Profile\ProfileController;
-use App\Http\Controllers\Api\Profile\SkillController;
+use App\Http\Controllers\Api\V1\Profile\PortfolioController;
+use App\Http\Controllers\Api\V1\Profile\ProfileController;
+use App\Http\Controllers\Api\V1\Profile\SkillController;
 use Illuminate\Support\Facades\Route;
 
 /*

@@ -1,9 +1,9 @@
 <?php
 
-use App\Http\Controllers\Api\Collaboration\ConnectionController;
-use App\Http\Controllers\Api\Collaboration\InvitationController;
-use App\Http\Controllers\Api\Collaboration\MatchController;
-use App\Http\Controllers\Api\Collaboration\RatingController;
+use App\Http\Controllers\Api\V1\Collaboration\ConnectionController;
+use App\Http\Controllers\Api\V1\Collaboration\InvitationController;
+use App\Http\Controllers\Api\V1\Collaboration\MatchController;
+use App\Http\Controllers\Api\V1\Collaboration\RatingController;
 use Illuminate\Support\Facades\Route;
 
 /*
