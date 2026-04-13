@@ -4,25 +4,53 @@ namespace App\Services;
 
 use App\Models\CollaborationInvitation;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 class InvitationService
 {
     /**
-     * List all invitations for the user (sent + received).
+     * List invitations for the user (sent + received).
+     *
+     * Supported query params:
+     *   status          – pending | accepted | declined | expired | withdrawn
+     *   invitation_type – project_join | team_invite | collaboration_request | mentorship
+     *   direction       – sent | received | both (default: both)
+     *   sort_by         – created_at | expires_at | responded_at (default: created_at)
+     *   sort_dir        – asc | desc (default: desc)
      */
-    public function list(User $user): array
+    public function list(User $user, array $filters = []): array
     {
-        $sent = CollaborationInvitation::where('sender_id', $user->id)
-            ->with(['recipient', 'project'])
-            ->latest()
-            ->get();
+        $sortableColumns = ['created_at', 'expires_at', 'responded_at'];
+        $sortBy  = in_array($filters['sort_by'] ?? '', $sortableColumns)
+            ? $filters['sort_by'] : 'created_at';
+        $sortDir = ($filters['sort_dir'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+        $direction = $filters['direction'] ?? 'both';
 
-        $received = CollaborationInvitation::where('recipient_id', $user->id)
-            ->with(['sender', 'project'])
-            ->latest()
-            ->get();
+        // Always initialise both as proper Eloquent collections (not plain collect())
+        // so InvitationResource::collection() never receives a plain Collection.
+        $sent     = CollaborationInvitation::whereNull('id')->get(); // empty Eloquent collection
+        $received = CollaborationInvitation::whereNull('id')->get(); // empty Eloquent collection
+
+        if (in_array($direction, ['sent', 'both'])) {
+            $sentQuery = CollaborationInvitation::where('sender_id', $user->id)
+                ->with(['recipient', 'project']);
+
+            if (! empty($filters['status']))          $sentQuery->where('status', $filters['status']);
+            if (! empty($filters['invitation_type'])) $sentQuery->where('invitation_type', $filters['invitation_type']);
+
+            $sent = $sentQuery->orderBy($sortBy, $sortDir)->get();
+        }
+
+        if (in_array($direction, ['received', 'both'])) {
+            $receivedQuery = CollaborationInvitation::where('recipient_id', $user->id)
+                ->with(['sender', 'project']);
+
+            if (! empty($filters['status']))          $receivedQuery->where('status', $filters['status']);
+            if (! empty($filters['invitation_type'])) $receivedQuery->where('invitation_type', $filters['invitation_type']);
+
+            $received = $receivedQuery->orderBy($sortBy, $sortDir)->get();
+        }
 
         return compact('sent', 'received');
     }
@@ -40,7 +68,6 @@ class InvitationService
             ]);
         }
 
-        // Prevent duplicate pending invitations of the same type to the same recipient
         $duplicate = CollaborationInvitation::where('sender_id', $sender->id)
             ->where('recipient_id', $data['recipient_id'])
             ->where('invitation_type', $data['invitation_type'])

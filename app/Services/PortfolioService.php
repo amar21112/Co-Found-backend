@@ -5,23 +5,65 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\PortfolioItem;
 use App\Models\PortfolioSkill;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
 class PortfolioService
 {
     /**
-     * List all portfolio items for a user.
+     * List portfolio items for a user.
+     *
      * Non-owners only see public items.
+     *
+     * Filters  : search (title, description), item_type, visibility (owner only),
+     *            is_featured, skill (skill_name inside portfolio_skills)
+     * Sort     : sort_by (title | created_at | updated_at), sort_dir (asc | desc)
      */
-    public function listItems(User $viewer, User $owner): \Illuminate\Database\Eloquent\Collection
+    public function listItems(User $viewer, User $owner, array $filters = []): Collection
     {
         $query = $owner->portfolioItems()->with('skills');
 
+        // Non-owners can only see public items
         if ($viewer->id !== $owner->id) {
             $query->where('visibility', 'public');
+        } elseif (! empty($filters['visibility'])) {
+            // Owner can filter by visibility
+            $query->where('visibility', $filters['visibility']);
         }
 
-        return $query->latest()->get();
+        // Search by title or description
+        if (! empty($filters['search'])) {
+            $term = '%' . $filters['search'] . '%';
+            $query->where(function ($q) use ($term) {
+                $q->where('title', 'LIKE', $term)
+                    ->orWhere('description', 'LIKE', $term);
+            });
+        }
+
+        // Filter by item type
+        if (! empty($filters['item_type'])) {
+            $query->where('item_type', $filters['item_type']);
+        }
+
+        // Filter by featured status
+        if (isset($filters['is_featured']) && $filters['is_featured'] !== '') {
+            $query->where('is_featured', filter_var($filters['is_featured'], FILTER_VALIDATE_BOOLEAN));
+        }
+
+        // Filter by skill tag
+        if (! empty($filters['skill'])) {
+            $query->whereHas('skills', function ($q) use ($filters) {
+                $q->where('skill_name', 'LIKE', '%' . $filters['skill'] . '%');
+            });
+        }
+
+        // Sorting — whitelist allowed columns
+        $allowed = ['title', 'created_at', 'updated_at'];
+        $sortBy  = in_array($filters['sort_by'] ?? '', $allowed) ? $filters['sort_by'] : 'created_at';
+        $sortDir = ($filters['sort_dir'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($sortBy, $sortDir);
+
+        return $query->get();
     }
 
     /**
@@ -33,9 +75,7 @@ class PortfolioService
             $skills = $data['skills'] ?? [];
             unset($data['skills']);
 
-            /** @var PortfolioItem $item */
             $item = $user->portfolioItems()->create($data);
-
             $this->syncSkills($item, $skills);
 
             return $item->load('skills');
@@ -75,8 +115,6 @@ class PortfolioService
             $item->delete();
         });
     }
-
-    // ── Private helpers ──────────────────────────────────────────────────────
 
     private function syncSkills(PortfolioItem $item, array $skillNames): void
     {

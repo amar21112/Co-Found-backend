@@ -5,24 +5,60 @@ namespace App\Services;
 use App\Models\MatchFeedback;
 use App\Models\MatchModel;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
 
 class MatchService
 {
     /**
-     * List all matches for the user, eager-loading the matched entity.
+     * List all matches for the user.
+     *
+     * Filters  : match_type (collaborator | project),
+     *            viewed (true | false),
+     *            saved (true | false),
+     *            min_score (e.g. 0.7 — minimum compatibility_score)
+     * Sort     : sort_by (compatibility_score | created_at | expires_at),
+     *            sort_dir (asc | desc)
+     * Paginate : per_page (default 15, max 50)
      */
-    public function list(User $user): Collection
+    public function list(User $user, array $filters = []): LengthAwarePaginator
     {
-        return MatchModel::where('user_id', $user->id)
-            ->with(['matchedUser', 'matchedProject'])
-            ->latest()
-            ->get();
+        $query = MatchModel::where('user_id', $user->id)
+            ->with(['matchedUser', 'matchedProject']);
+
+        // Filter by match type
+        if (! empty($filters['match_type'])) {
+            $query->where('match_type', $filters['match_type']);
+        }
+
+        // Filter by viewed status
+        if (isset($filters['viewed']) && $filters['viewed'] !== '') {
+            $query->where('viewed', filter_var($filters['viewed'], FILTER_VALIDATE_BOOLEAN));
+        }
+
+        // Filter by saved status
+        if (isset($filters['saved']) && $filters['saved'] !== '') {
+            $query->where('saved', filter_var($filters['saved'], FILTER_VALIDATE_BOOLEAN));
+        }
+
+        // Filter by minimum compatibility score
+        if (isset($filters['min_score']) && $filters['min_score'] !== '') {
+            $query->where('compatibility_score', '>=', (float) $filters['min_score']);
+        }
+
+        // Sorting
+        $allowed = ['compatibility_score', 'created_at', 'expires_at'];
+        $sortBy  = in_array($filters['sort_by'] ?? '', $allowed) ? $filters['sort_by'] : 'created_at';
+        $sortDir = ($filters['sort_dir'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($sortBy, $sortDir);
+
+        $perPage = min((int) ($filters['per_page'] ?? 15), 50);
+
+        return $query->paginate($perPage);
     }
 
     /**
-     * Mark a match as viewed (idempotent — safe to call multiple times).
+     * Mark a match as viewed (idempotent).
      */
     public function markViewed(User $user, MatchModel $match): MatchModel
     {
@@ -61,8 +97,8 @@ class MatchService
         $this->authorizeOwnership($user, $match);
 
         $exists = MatchFeedback::where('match_id', $match->id)
-                               ->where('user_id', $user->id)
-                               ->exists();
+            ->where('user_id', $user->id)
+            ->exists();
 
         if ($exists) {
             throw ValidationException::withMessages([
@@ -76,13 +112,10 @@ class MatchService
             'feedback_type' => $data['feedback_type'],
         ]);
 
-        // Mark action_taken on the match
         $match->update(['action_taken' => true]);
 
         return $feedback;
     }
-
-    // ── Private helpers ──────────────────────────────────────────────────────
 
     private function authorizeOwnership(User $user, MatchModel $match): void
     {

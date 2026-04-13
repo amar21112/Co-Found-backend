@@ -17,17 +17,11 @@ class MatchController extends Controller
 
     public function __construct(private readonly MatchService $matchService) {}
 
-    // =========================================================================
-    // GET /api/matches
-    // =========================================================================
-
-    /**
-     * List all matches for the authenticated user.
-     */
+    // GET /api/v1/matches
     public function index(Request $request): JsonResponse
     {
         $user    = $this->resolveUser($request);
-        $matches = $this->matchService->list($user);
+        $matches = $this->matchService->list($user, $request->query());
 
         return response()->json([
             'status' => 'success',
@@ -35,13 +29,7 @@ class MatchController extends Controller
         ]);
     }
 
-    // =========================================================================
-    // PATCH /api/matches/{match}/view
-    // =========================================================================
-
-    /**
-     * Mark a match as viewed.
-     */
+    // PATCH /api/v1/matches/{match}/view
     public function markViewed(Request $request, MatchModel $match): JsonResponse
     {
         $user  = $this->resolveUser($request);
@@ -54,18 +42,11 @@ class MatchController extends Controller
         ]);
     }
 
-    // =========================================================================
-    // PATCH /api/matches/{match}/save
-    // =========================================================================
-
-    /**
-     * Toggle the saved state of a match.
-     */
+    // PATCH /api/v1/matches/{match}/save
     public function save(Request $request, MatchModel $match): JsonResponse
     {
-        $user  = $this->resolveUser($request);
-        $match = $this->matchService->toggleSave($user, $match);
-
+        $user    = $this->resolveUser($request);
+        $match   = $this->matchService->toggleSave($user, $match);
         $message = $match->saved ? 'Match saved successfully.' : 'Match unsaved successfully.';
 
         return response()->json([
@@ -75,13 +56,7 @@ class MatchController extends Controller
         ]);
     }
 
-    // =========================================================================
-    // POST /api/matches/{match}/feedback
-    // =========================================================================
-
-    /**
-     * Submit feedback for a match.
-     */
+    // POST /api/v1/matches/{match}/feedback
     public function feedback(SubmitFeedbackRequest $request, MatchModel $match): JsonResponse
     {
         $user     = $this->resolveUser($request);

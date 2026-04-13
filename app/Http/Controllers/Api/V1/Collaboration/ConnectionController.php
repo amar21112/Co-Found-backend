@@ -18,16 +18,13 @@ class ConnectionController extends Controller
     public function __construct(private readonly ConnectionService $connectionService) {}
 
     // =========================================================================
-    // GET /api/connections
+    // GET /api/v1/connections
     // =========================================================================
 
-    /**
-     * List all accepted connections for the authenticated user.
-     */
     public function index(Request $request): JsonResponse
     {
         $user        = $this->resolveUser($request);
-        $connections = $this->connectionService->list($user);
+        $connections = $this->connectionService->list($user, $request->query());
 
         return response()->json([
             'status' => 'success',
@@ -36,12 +33,9 @@ class ConnectionController extends Controller
     }
 
     // =========================================================================
-    // POST /api/connections
+    // POST /api/v1/connections
     // =========================================================================
 
-    /**
-     * Send a connection request to another user.
-     */
     public function store(SendConnectionRequest $request): JsonResponse
     {
         $user       = $this->resolveUser($request);
@@ -55,12 +49,9 @@ class ConnectionController extends Controller
     }
 
     // =========================================================================
-    // PATCH /api/connections/{connection}/accept
+    // PATCH /api/v1/connections/{connection}/accept
     // =========================================================================
 
-    /**
-     * Accept a pending connection request.
-     */
     public function accept(Request $request, UserConnection $connection): JsonResponse
     {
         $user       = $this->resolveUser($request);
@@ -74,12 +65,43 @@ class ConnectionController extends Controller
     }
 
     // =========================================================================
-    // DELETE /api/connections/{connection}
+    // PATCH /api/v1/connections/{connection}/reject
+    // Recipient rejects a pending request → record is deleted automatically.
     // =========================================================================
 
-    /**
-     * Remove a connection (works for both pending and accepted).
-     */
+    public function reject(Request $request, UserConnection $connection): JsonResponse
+    {
+        $user = $this->resolveUser($request);
+        $this->connectionService->reject($user, $connection);
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Connection request rejected and removed.',
+        ]);
+    }
+
+    // =========================================================================
+    // PATCH /api/v1/connections/{connection}/block
+    // Either party blocks — updates status to blocked,
+    // re-assigns requester_id = blocker, recipient_id = blocked user.
+    // =========================================================================
+
+    public function block(Request $request, UserConnection $connection): JsonResponse
+    {
+        $user       = $this->resolveUser($request);
+        $connection = $this->connectionService->block($user, $connection);
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'User blocked successfully.',
+            'data'    => new ConnectionResource($connection),
+        ]);
+    }
+
+    // =========================================================================
+    // DELETE /api/v1/connections/{connection}
+    // =========================================================================
+
     public function destroy(Request $request, UserConnection $connection): JsonResponse
     {
         $user = $this->resolveUser($request);

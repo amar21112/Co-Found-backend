@@ -18,118 +18,51 @@ class SkillController extends Controller
 
     public function __construct(private readonly SkillService $skillService) {}
 
-    // =========================================================================
-    // GET /api/profile/skills
-    // =========================================================================
-
-    /**
-     * List all skills belonging to the authenticated user.
-     */
+    // GET /api/v1/profile/skills
     public function index(Request $request): JsonResponse
     {
         $user   = $this->resolveUser($request);
-        $skills = $this->skillService->listSkills($user);
-
-        return response()->json([
-            'status' => 'success',
-            'data'   => SkillResource::collection($skills),
-        ]);
+        $skills = $this->skillService->listSkills($user, $request->query());
+        return response()->json(['status' => 'success', 'data' => SkillResource::collection($skills)]);
     }
 
-    // =========================================================================
-    // POST /api/profile/skills
-    // =========================================================================
-
-    /**
-     * Add a new skill to the authenticated user's profile.
-     */
+    // POST /api/v1/profile/skills
     public function store(StoreSkillRequest $request): JsonResponse
     {
         $user  = $this->resolveUser($request);
         $skill = $this->skillService->store($user, $request->validated());
-
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Skill added successfully.',
-            'data'    => new SkillResource($skill->load('endorsements.endorser')),
-        ], 201);
+        return response()->json(['status' => 'success', 'message' => 'Skill added successfully.', 'data' => new SkillResource($skill->load('endorsements.endorser'))], 201);
     }
 
-    // =========================================================================
-    // PUT /api/profile/skills/{skill}
-    // =========================================================================
-
-    /**
-     * Update one of the authenticated user's skills.
-     */
+    // PUT /api/v1/profile/skills/{skill}
     public function update(UpdateSkillRequest $request, UserSkill $skill): JsonResponse
     {
         $user    = $this->resolveUser($request);
         $updated = $this->skillService->update($user, $skill, $request->validated());
-
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Skill updated successfully.',
-            'data'    => new SkillResource($updated->load('endorsements.endorser')),
-        ]);
+        return response()->json(['status' => 'success', 'message' => 'Skill updated successfully.', 'data' => new SkillResource($updated->load('endorsements.endorser'))]);
     }
 
-    // =========================================================================
-    // DELETE /api/profile/skills/{skill}
-    // =========================================================================
-
-    /**
-     * Remove one of the authenticated user's skills.
-     */
+    // DELETE /api/v1/profile/skills/{skill}
     public function destroy(Request $request, UserSkill $skill): JsonResponse
     {
         $user = $this->resolveUser($request);
         $this->skillService->delete($user, $skill);
-
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Skill removed successfully.',
-        ]);
+        return response()->json(['status' => 'success', 'message' => 'Skill removed successfully.']);
     }
 
-    // =========================================================================
-    // POST /api/skills/{skill}/endorse
-    // =========================================================================
-
-    /**
-     * Endorse another user's skill.
-     */
+    // POST /api/v1/skills/{skill}/endorse
     public function endorse(Request $request, UserSkill $skill): JsonResponse
     {
         $user        = $this->resolveUser($request);
         $endorsement = $this->skillService->endorse($user, $skill);
-
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Skill endorsed successfully.',
-            'data'    => [
-                'endorsement_id'  => $endorsement->id,
-                'skill_id'        => $skill->id,
-                'endorsed_by'     => $user->id,
-            ],
-        ], 201);
+        return response()->json(['status' => 'success', 'message' => 'Skill endorsed successfully.', 'data' => ['endorsement_id' => $endorsement->id, 'skill_id' => $skill->id, 'endorsed_by' => $user->id]], 201);
     }
 
-    // =========================================================================
-    // DELETE /api/skills/{skill}/endorse
-    // =========================================================================
-
-    /**
-     * Remove the authenticated user's endorsement from a skill.
-     */
+    // DELETE /api/v1/skills/{skill}/endorse
     public function unendorse(Request $request, UserSkill $skill): JsonResponse
     {
         $user = $this->resolveUser($request);
         $this->skillService->unendorse($user, $skill);
-
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Endorsement removed successfully.',
-        ]);
+        return response()->json(['status' => 'success', 'message' => 'Endorsement removed successfully.']);
     }
 }
