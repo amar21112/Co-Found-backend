@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Enums\IdentityVerificationLevel;
+use App\Enums\UserRole;
 use App\Models\User;
 use App\Models\IdentityVerification;
 use App\Models\VerificationReview;
@@ -11,7 +13,7 @@ class IdentityVerificationSeeder extends Seeder
 {
     public function run(): void
     {
-        $regularUsers = User::where('role', 'regular_user')->inRandomOrder()->take(30)->get();
+        $regularUsers = User::where('role', UserRole::RegularUser->value)->inRandomOrder()->take(30)->get();
 
         foreach ($regularUsers as $index => $user) {
             if ($index < 12) {
@@ -25,7 +27,7 @@ class IdentityVerificationSeeder extends Seeder
 
                 $user->update([
                     'identity_verified'           => true,
-                    'identity_verification_level' => 'advanced',
+                    'identity_verification_level' => IdentityVerificationLevel::Advanced->value,
                 ]);
 
             } elseif ($index < 20) {

@@ -10,9 +10,13 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | Collaboration Routes — v1
 |--------------------------------------------------------------------------
+|
+| All collaboration actions require a real, verified user.
+| Guests may not send connections, invitations, or ratings.
+|
 */
 
-Route::middleware('api')->group(function () {
+Route::middleware(['auth:sanctum', 'no.guest', 'verified'])->group(function () {
 
     // ── Connections ───────────────────────────────────────────────────────────
 

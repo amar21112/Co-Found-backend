@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\IdentityVerificationStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -31,6 +32,7 @@ class IdentityVerification extends Model
         'liveness_check_passed' => 'boolean',
         'liveness_check_data'   => 'array',
         'face_match_score'      => 'float',
+        'verification_status'   => IdentityVerificationStatus::class,
     ];
 
     public function user(): BelongsTo
@@ -46,11 +48,27 @@ class IdentityVerification extends Model
     public function latestReview(): HasMany
     {
         return $this->hasMany(VerificationReview::class, 'verification_id')
-                    ->latest('reviewed_at')
-                    ->limit(1);
+            ->latest('reviewed_at')
+            ->limit(1);
     }
 
-    public function isPending(): bool   { return $this->verification_status === 'pending'; }
-    public function isVerified(): bool  { return $this->verification_status === 'verified'; }
-    public function isRejected(): bool  { return $this->verification_status === 'rejected'; }
+    public function isPending(): bool   {
+        return $this->verification_status === IdentityVerificationStatus::Pending;
+    }
+
+    public function isVerified(): bool  {
+        return $this->verification_status === IdentityVerificationStatus::Verified;
+    }
+
+    public function isRejected(): bool  {
+        return $this->verification_status === IdentityVerificationStatus::Rejected;
+    }
+
+    public function isUnderReview(): bool {
+        return $this->verification_status === IdentityVerificationStatus::UnderReview;
+    }
+
+    public function isEscalated(): bool {
+        return $this->verification_status === IdentityVerificationStatus::Escalated;
+    }
 }

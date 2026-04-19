@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RestrictionType;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,11 +23,12 @@ class UserRestriction extends Model
     ];
 
     protected $casts = [
-        'starts_at'      => 'datetime',
-        'expires_at'     => 'datetime',
-        'lifted_at'      => 'datetime',
-        'is_active'      => 'boolean',
-        'duration_hours' => 'integer',
+        'restriction_type' => RestrictionType::class,
+        'starts_at'        => 'datetime',
+        'expires_at'       => 'datetime',
+        'lifted_at'        => 'datetime',
+        'is_active'        => 'boolean',
+        'duration_hours'   => 'integer',
     ];
 
     public function user(): BelongsTo
@@ -44,6 +46,18 @@ class UserRestriction extends Model
         return $this->belongsTo(User::class, 'lifted_by');
     }
 
-    public function isPermanent(): bool { return $this->duration_hours === null; }
-    public function isExpired(): bool   { return $this->expires_at?->isPast(); }
+    public function isPermanent(): bool
+    {
+        return $this->duration_hours === null;
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->expires_at?->isPast() ?? false;
+    }
+
+    public function blocksLogin(): bool
+    {
+        return $this->restriction_type->blocksLogin();
+    }
 }

@@ -46,7 +46,10 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Tokens expire after 30 days of inactivity (in minutes).
+    // Guest tokens have their own expiry set at creation time (7 days).
+    // Set to null to disable expiration entirely.
+    'expiration' => 60 * 24 * 30, // 30 days
 
     /*
     |--------------------------------------------------------------------------

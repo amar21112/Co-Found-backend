@@ -1,31 +1,37 @@
 <?php
+
 namespace App\Traits;
+
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Auth\AuthenticationException;
+
+/**
+ * Resolves the currently authenticated user from the request.
+ *
+ * Resolution order (single source of truth):
+ *   1. auth()->user()  — Sanctum / session guard (primary)
+ *   2. $request->user() — fallback for guard-agnostic resolution
+ *   3. throw AuthenticationException — never return null silently
+ *
+ * Usage:
+ *   use ResolvesUser;
+ *   $user = $this->resolveUser($request);
+ */
 trait ResolvesUser
 {
-    public function resolveUser($request)
+    /**
+     * @throws AuthenticationException
+     */
+    public function resolveUser(Request $request): User
     {
-        if (auth()->check()) {
-            return auth()->user();
+        /** @var User|null $user */
+        $user = auth()->user() ?? $request->user();
+
+        if (! $user) {
+            throw new AuthenticationException();
         }
 
-        return \App\Models\User::find($request->user_id ?? 1);
+        return $user;
     }
 }
-/*
- *
- * use App\Traits\ResolvesUser;
-
-    class nameController extends Controller
-    {
-        use ResolvesUser;
-
-        public function name(Request $request)
-        {
-            $user = $this->resolveUser($request);
-            your logic
-        }
-    }
-       in api request send user_id field , after finish authentication module delete it .
-        and i will delete the check in function above will just return auth()->user;
-        and can use middleware and brear token latter
-*/

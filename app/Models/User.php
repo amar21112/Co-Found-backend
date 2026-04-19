@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\AccountStatus;
+use App\Enums\IdentityVerificationLevel;
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -9,10 +12,11 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory, HasUuids, Notifiable, SoftDeletes;
+    use HasFactory, HasUuids, Notifiable, SoftDeletes, HasApiTokens;
 
     protected $primaryKey = 'id';
     public $incrementing  = false;
@@ -33,18 +37,113 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'email_verified'            => 'boolean',
-        'identity_verified'         => 'boolean',
-        'email_verification_expires'=> 'datetime',
-        'last_login_at'             => 'datetime',
-        'locked_until'              => 'datetime',
-        'login_attempts'            => 'integer',
+        'role'                        => UserRole::class,
+        'account_status'              => AccountStatus::class,
+        'identity_verification_level' => IdentityVerificationLevel::class,
+        'email_verified'              => 'boolean',
+        'identity_verified'           => 'boolean',
+        'email_verification_expires'  => 'datetime',
+        'last_login_at'               => 'datetime',
+        'locked_until'                => 'datetime',
+        'login_attempts'              => 'integer',
     ];
 
     // ── Auth override ────────────────────────────────────────────────────────
     public function getAuthPassword(): string
     {
         return $this->password;
+    }
+
+    // =========================================================================
+    // Role helpers
+    // =========================================================================
+
+    public function isAdmin(): bool
+    {
+        return $this->role === UserRole::Administrator;
+    }
+
+    public function isModerator(): bool
+    {
+        return $this->role->isModerator();
+    }
+
+    public function isGuest(): bool
+    {
+        return $this->role === UserRole::Guest;
+    }
+
+    public function isRegularUser(): bool
+    {
+        return $this->role === UserRole::RegularUser;
+    }
+
+    // =========================================================================
+    // Account status helpers
+    // =========================================================================
+
+    public function isActive(): bool
+    {
+        return $this->account_status === AccountStatus::Active;
+    }
+
+    public function isPending(): bool
+    {
+        return $this->account_status === AccountStatus::Pending;
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->account_status === AccountStatus::Suspended;
+    }
+
+    public function isBanned(): bool
+    {
+        return $this->account_status === AccountStatus::Banned;
+    }
+
+    /**
+     * True when the account is blocked from authenticating by an admin action.
+     */
+    public function isBlocked(): bool
+    {
+        return $this->account_status->isBlocked();
+    }
+
+    /**
+     * True when the account can receive a Sanctum token.
+     * Pending users can log in but are soft-blocked on write routes.
+     */
+    public function canAuthenticate(): bool
+    {
+        return $this->account_status->canAuthenticate();
+    }
+
+    // =========================================================================
+    // Verification helpers
+    // =========================================================================
+
+    public function isEmailVerified(): bool
+    {
+        return (bool) $this->email_verified;
+    }
+
+    public function isIdentityVerified(): bool
+    {
+        return (bool) $this->identity_verified;
+    }
+
+    public function isFullyVerified(): bool
+    {
+        return $this->isEmailVerified() && $this->isIdentityVerified();
+    }
+
+    /**
+     * Is the account temporarily locked due to brute-force?
+     */
+    public function isLocked(): bool
+    {
+        return $this->locked_until !== null && $this->locked_until->isFuture();
     }
 
     // =========================================================================
@@ -90,6 +189,21 @@ class User extends Authenticatable
     public function verificationReviews(): HasMany
     {
         return $this->hasMany(VerificationReview::class, 'reviewer_id');
+    }
+
+    public function restrictions(): HasMany
+    {
+        return $this->hasMany(UserRestriction::class);
+    }
+
+    /** Active admin-issued restrictions */
+    public function activeRestrictions(): HasMany
+    {
+        return $this->hasMany(UserRestriction::class)
+            ->where('is_active', true)
+            ->where(function ($q) {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            });
     }
 
     // =========================================================================
@@ -254,11 +368,6 @@ class User extends Authenticatable
         return $this->hasMany(ContentModeration::class, 'moderator_id');
     }
 
-    public function restrictions(): HasMany
-    {
-        return $this->hasMany(UserRestriction::class);
-    }
-
     public function restrictionsIssued(): HasMany
     {
         return $this->hasMany(UserRestriction::class, 'restricted_by');
@@ -287,29 +396,5 @@ class User extends Authenticatable
     public function configurationChanges(): HasMany
     {
         return $this->hasMany(ConfigurationHistory::class, 'changed_by');
-    }
-
-    // =========================================================================
-    // Helpers
-    // =========================================================================
-
-    public function isAdmin(): bool
-    {
-        return $this->role === 'administrator';
-    }
-
-    public function isModerator(): bool
-    {
-        return in_array($this->role, ['administrator', 'moderator']);
-    }
-
-    public function isActive(): bool
-    {
-        return $this->account_status === 'active';
-    }
-
-    public function isIdentityVerified(): bool
-    {
-        return (bool) $this->identity_verified;
     }
 }
