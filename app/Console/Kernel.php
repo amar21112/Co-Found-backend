@@ -13,6 +13,9 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // $schedule->command('inspire')->hourly();
+
+        // Prune stale guest accounts daily at midnight
+        $schedule->command('auth:prune-guests --days=7')->daily();
     }
 
     /**

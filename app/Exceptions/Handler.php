@@ -2,7 +2,16 @@
 
 namespace App\Exceptions;
 
+use App\Exceptions\Auth\AccountLockedException;
+use App\Exceptions\Auth\AccountNotActiveException;
+use App\Exceptions\Auth\AccountRestrictedException;
+use App\Exceptions\Auth\EmailAlreadyVerifiedException;
+use App\Exceptions\Auth\InvalidCredentialsException;
+use App\Exceptions\Auth\InvalidPasswordResetTokenException;
+use App\Exceptions\Auth\InvalidVerificationTokenException;
+use DateTimeInterface;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\JsonResponse;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -12,9 +21,7 @@ class Handler extends ExceptionHandler
      *
      * @var array<class-string<\Throwable>, \Psr\Log\LogLevel::*>
      */
-    protected $levels = [
-        //
-    ];
+    protected $levels = [];
 
     /**
      * A list of the exception types that are not reported.
@@ -22,7 +29,13 @@ class Handler extends ExceptionHandler
      * @var array<int, class-string<\Throwable>>
      */
     protected $dontReport = [
-        //
+        InvalidCredentialsException::class,
+        AccountLockedException::class,
+        AccountNotActiveException::class,
+        AccountRestrictedException::class,
+        EmailAlreadyVerifiedException::class,
+        InvalidVerificationTokenException::class,
+        InvalidPasswordResetTokenException::class,
     ];
 
     /**
@@ -41,8 +54,47 @@ class Handler extends ExceptionHandler
      */
     public function register(): void
     {
+        // ── 401 Auth Exceptions ───────────────────────────────────────────────
+        $this->renderable(fn(InvalidCredentialsException $e) =>
+        $this->authError($e->getMessage(), 401)
+        );
+
+        $this->renderable(fn(AccountNotActiveException $e) =>
+        $this->authError($e->getMessage(), 403)
+        );
+
+        $this->renderable(fn(AccountRestrictedException $e) =>
+        $this->authError($e->getMessage(), 403)
+        );
+
+        $this->renderable(fn(AccountLockedException $e) =>
+        response()->json([
+            'status'  => 'error',
+            'message' => $e->getMessage(),
+            'locked_until' => $e->lockedUntil->format(DateTimeInterface::ATOM),
+        ], 423)
+        );
+
+        // ── 400 Token Exceptions ──────────────────────────────────────────────
+        $this->renderable(fn(InvalidVerificationTokenException $e) =>
+        $this->authError($e->getMessage(), 400)
+        );
+
+        $this->renderable(fn(InvalidPasswordResetTokenException $e) =>
+        $this->authError($e->getMessage(), 400)
+        );
+
+        $this->renderable(fn(EmailAlreadyVerifiedException $e) =>
+        $this->authError($e->getMessage(), 409)
+        );
+
         $this->reportable(function (Throwable $e) {
             //
         });
+    }
+
+    private function authError(string $message, int $status): JsonResponse
+    {
+        return response()->json(['status' => 'error', 'message' => $message], $status);
     }
 }
