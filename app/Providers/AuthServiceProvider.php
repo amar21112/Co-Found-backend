@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 // use Illuminate\Support\Facades\Gate;
+use App\Models\User;
 use App\Repositories\Contracts\PasswordResetRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\Eloquent\PasswordResetRepository;
@@ -10,7 +11,10 @@ use App\Repositories\Eloquent\UserRepository;
 use App\Services\Auth\AuthService;
 use App\Services\Auth\EmailVerificationService;
 use App\Services\Auth\PasswordResetService;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Laravel\Sanctum\PersonalAccessToken;
+use Laravel\Sanctum\Sanctum;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -58,6 +62,9 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        //
+        // Tell Sanctum to use the custom UUID-aware PersonalAccessToken model.
+        // The default model uses unsignedBigInteger for tokenable_id which is
+        // incompatible with UUID primary keys used across Co-Found.
+        Sanctum::usePersonalAccessTokenModel(\App\Models\PersonalAccessToken::class);
     }
 }
