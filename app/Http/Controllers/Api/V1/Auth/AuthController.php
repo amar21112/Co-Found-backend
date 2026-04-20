@@ -9,13 +9,13 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Resources\UserResource;
+use App\Models\PersonalAccessToken;
 use App\Models\User;
 use App\Services\Auth\AuthService;
 use App\Services\Auth\EmailVerificationService;
 use App\Services\Auth\PasswordResetService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
