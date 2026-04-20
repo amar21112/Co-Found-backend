@@ -22,7 +22,7 @@ class ProjectTeamController extends Controller
      */
     public function index(Request $request, Project $project): JsonResponse
     {
-//        $this->authorize('view', $project);
+        $this->authorize('view', $project);
 
         $activeOnly = filter_var($request->input('active_only', true), FILTER_VALIDATE_BOOLEAN);
 
@@ -39,7 +39,7 @@ class ProjectTeamController extends Controller
      */
     public function update(UpdateTeamMemberRequest $request, Project $project, string $userId): JsonResponse
     {
-//        $this->authorize('manageTeam', $project);
+        $this->authorize('manageTeam', $project);
 
         $member = $this->service->updateMember($project, $userId, $request->validated());
 
@@ -55,7 +55,7 @@ class ProjectTeamController extends Controller
      */
     public function destroy(Request $request, Project $project, string $userId): JsonResponse
     {
-//        $this->authorize('manageTeam', $project);
+        $this->authorize('manageTeam', $project);
 
         $this->service->removeMember($project, $userId);
 

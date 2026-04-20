@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
 
-    // ── Guest-accessible browse (page-capped, data stripped in resource) ──────
+    // ── Guest-accessible browse (page-capped, data stripped in resource) ────── done
     Route::middleware(['auth:sanctum', 'guest.content'])->group(function () {
         Route::get('projects',           [ProjectController::class, 'index']);
         Route::get('projects/{project}', [ProjectController::class, 'show']);
@@ -34,7 +34,7 @@ Route::prefix('v1')->group(function () {
         Route::get('projects/{project}/roles', [ProjectRoleController::class, 'index']);
     });
 
-    // ── Milestones and team — real users only (internal project info) ─────────
+    // ── Milestones and team — real users only (internal project info) ─────────done
     Route::middleware(['auth:sanctum', 'no.guest'])->group(function () {
         Route::get('projects/{project}/milestones', [ProjectMilestoneController::class, 'index']);
         Route::get('projects/{project}/team',       [ProjectTeamController::class, 'index']);
