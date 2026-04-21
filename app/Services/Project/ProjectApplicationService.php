@@ -13,10 +13,12 @@ use App\Models\ProjectApplication;
 use App\Models\User;
 use App\Repositories\Contracts\ProjectApplicationRepositoryInterface;
 use App\Repositories\Contracts\ProjectRoleRepositoryInterface;
+use App\Traits\SendsNotifications;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class ProjectApplicationService
 {
+    use SendsNotifications;
     public function __construct(
         private readonly ProjectApplicationRepositoryInterface $applicationRepo,
         private readonly ProjectRoleRepositoryInterface        $roleRepo,
@@ -93,6 +95,15 @@ class ProjectApplicationService
         if (!ApplicationStatus::from($application->status)->isReviewable()) {
             throw new ProjectException('This application cannot be reviewed in its current state.', 422);
         }
+
+        $this->notify(
+                userId:   $application->applicant_id,
+                type:     'application_accepted',
+                title:    'Your application was accepted!',
+                body:     "You've joined {$project->title}",
+                data:     ['project_id' => $project->id],
+                priority: 'high',
+            );
 
         return $this->applicationRepo->update($application, [
             'status'      => $newStatus,
