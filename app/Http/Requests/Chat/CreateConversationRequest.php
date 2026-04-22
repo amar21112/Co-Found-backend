@@ -15,7 +15,7 @@ class CreateConversationRequest extends FormRequest
             'title'             => 'nullable|string|max:255|required_if:conversation_type,group',
             'project_id'        => 'nullable|uuid|exists:projects,id|required_if:conversation_type,project',
             'participant_ids'   => 'required|array|min:1',
-            'participant_ids.*' => 'uuid|exists:users,id|different:participant_ids.0',
+            'participant_ids.*' => 'uuid|exists:users,id|distinct',
         ];
     }
 

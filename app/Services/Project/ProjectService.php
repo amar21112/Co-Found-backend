@@ -68,14 +68,7 @@ class ProjectService
         foreach ($roles as $role) {
             $this->roleRepo->create($project->id, $role);
         }
-        $this->notify(
-            userId:   $owner->id,
-            type:     'application_accepted',
-            title:    'Your application was accepted!',
-            body:     "You've joined {$project->title}",
-            data:     ['project_id' => $project->id],
-            priority: 'high',
-        );
+       
         return $this->projectRepo->findById($project->id);
     }
 
