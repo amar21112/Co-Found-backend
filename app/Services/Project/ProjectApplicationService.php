@@ -13,10 +13,13 @@ use App\Models\ProjectApplication;
 use App\Models\User;
 use App\Repositories\Contracts\ProjectApplicationRepositoryInterface;
 use App\Repositories\Contracts\ProjectRoleRepositoryInterface;
+use App\Traits\SendsNotifications;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Str;
 
 class ProjectApplicationService
 {
+    use SendsNotifications;
     public function __construct(
         private readonly ProjectApplicationRepositoryInterface $applicationRepo,
         private readonly ProjectRoleRepositoryInterface        $roleRepo,
@@ -83,7 +86,19 @@ class ProjectApplicationService
 
         $project->increment('application_count');
 
-        return $this->applicationRepo->findById($application->id);
+        $fresh = $this->applicationRepo->findById($application->id);
+
+        // Notify the project owner that a new application arrived
+        $this->notify(
+            userId:   $project->owner_id,
+            type:     'new_application',
+            title:    'New application received',
+            body:     "{$applicant->full_name} applied to \u201c{$project->title}\u201d.",
+            data:     ['project_id' => $project->id, 'application_id' => $fresh->id],
+            priority: 'high',
+        );
+
+        return $fresh;
     }
 
     public function review(Project $project, string $applicationId, string $newStatus, User $reviewer): ProjectApplication
@@ -94,11 +109,29 @@ class ProjectApplicationService
             throw new ProjectException('This application cannot be reviewed in its current state.', 422);
         }
 
-        return $this->applicationRepo->update($application, [
+        $updated = $this->applicationRepo->update($application, [
             'status'      => $newStatus,
             'reviewed_by' => $reviewer->id,
             'reviewed_at' => now(),
         ]);
+
+        // Notify the applicant of the decision
+        $status  = ApplicationStatus::from($newStatus);
+        $project = $application->project;
+        $this->notify(
+            userId:   $application->applicant_id,
+            type:     "application_{$newStatus}",
+            title:    $status === ApplicationStatus::Accepted
+                          ? '🎉 Application accepted!'
+                          : 'Application update',
+            body:     $status === ApplicationStatus::Accepted
+                          ? "Congratulations! You\'ve been accepted to \u201c{$project?->title}\u201d."
+                          : "Your application to \u201c{$project?->title}\u201d was {$newStatus}.",
+            data:     ['project_id' => $application->project_id, 'application_id' => $application->id],
+            priority: $status === ApplicationStatus::Accepted ? 'high' : 'normal',
+        );
+
+        return $updated;
     }
 
     public function withdraw(string $applicationId, User $applicant): ProjectApplication

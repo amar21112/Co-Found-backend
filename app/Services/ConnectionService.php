@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\UserConnection;
+use App\Traits\SendsNotifications;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
 
 class ConnectionService
 {
+    use SendsNotifications;
     /**
      * List connections for a user.
      *
@@ -99,12 +101,24 @@ class ConnectionService
             throw ValidationException::withMessages(['recipient_id' => [$message]]);
         }
 
-        return UserConnection::create([
+        $connection = UserConnection::create([
             'requester_id'    => $requester->id,
             'recipient_id'    => $recipientId,
             'connection_type' => $data['connection_type'] ?? null,
             'status'          => 'pending',
         ]);
+
+        // Notify the recipient of the new request
+        $this->notify(
+            userId:   $recipientId,
+            type:     'connection_request',
+            title:    'New connection request',
+            body:     "{$requester->full_name} sent you a connection request.",
+            data:     ['connection_id' => $connection->id, 'requester_id' => $requester->id],
+            priority: 'normal',
+        );
+
+        return $connection;
     }
 
     /**
@@ -127,7 +141,19 @@ class ConnectionService
 
         $connection->update(['status' => 'accepted']);
 
-        return $connection->load(['requester', 'recipient']);
+        $loaded = $connection->load(['requester', 'recipient']);
+
+        // Notify the requester that their request was accepted
+        $this->notify(
+            userId:   $connection->requester_id,
+            type:     'connection_accepted',
+            title:    'Connection accepted 🎉',
+            body:     "{$user->full_name} accepted your connection request.",
+            data:     ['connection_id' => $connection->id],
+            priority: 'normal',
+        );
+
+        return $loaded;
     }
 
     /**

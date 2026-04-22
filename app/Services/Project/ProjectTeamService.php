@@ -8,10 +8,12 @@ use App\Models\Project;
 use App\Models\ProjectTeamMember;
 use App\Models\User;
 use App\Repositories\Contracts\ProjectTeamRepositoryInterface;
+use App\Traits\SendsNotifications;
 use Illuminate\Support\Collection;
 
 class ProjectTeamService
 {
+    use SendsNotifications;
     public function __construct(
         private readonly ProjectTeamRepositoryInterface $teamRepo,
     ) {}
@@ -41,6 +43,16 @@ class ProjectTeamService
 
         $member = $this->resolveMember($project, $userId);
         $this->teamRepo->removeMember($member);
+
+        // Notify the removed member
+        $this->notify(
+            userId:   $userId,
+            type:     'removed_from_project',
+            title:    'Removed from project',
+            body:     "You have been removed from \u201c{$project->title}\u201d.",
+            data:     ['project_id' => $project->id],
+            priority: 'high',
+        );
     }
 
     public function leave(Project $project, User $user): void
@@ -56,6 +68,16 @@ class ProjectTeamService
         }
 
         $this->teamRepo->removeMember($member);
+
+        // Notify the project owner that the member left
+        $this->notify(
+            userId:   $project->owner_id,
+            type:     'member_left_project',
+            title:    'Team member left',
+            body:     "{$user->full_name} left \u201c{$project->title}\u201d.",
+            data:     ['project_id' => $project->id, 'user_id' => $user->id],
+            priority: 'normal',
+        );
     }
 
     private function resolveMember(Project $project, string $userId): ProjectTeamMember
