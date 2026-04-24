@@ -9,11 +9,13 @@ use App\Repositories\Contracts\ProjectRepositoryInterface;
 use App\Repositories\Contracts\ProjectSkillRepositoryInterface;
 use App\Repositories\Contracts\ProjectRoleRepositoryInterface;
 use App\Repositories\Contracts\ProjectTeamRepositoryInterface;
+use App\Traits\SendsNotifications;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 
 class ProjectService
 {
+    use SendsNotifications;
     public function __construct(
         private readonly ProjectRepositoryInterface      $projectRepo,
         private readonly ProjectSkillRepositoryInterface $skillRepo,
@@ -66,7 +68,7 @@ class ProjectService
         foreach ($roles as $role) {
             $this->roleRepo->create($project->id, $role);
         }
-
+       
         return $this->projectRepo->findById($project->id);
     }
 

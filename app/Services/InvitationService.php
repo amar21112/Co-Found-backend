@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Models\CollaborationInvitation;
 use App\Models\User;
+use App\Traits\SendsNotifications;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 class InvitationService
 {
+    use SendsNotifications;
     /**
      * List invitations for the user (sent + received).
      *
@@ -80,7 +82,7 @@ class InvitationService
             ]);
         }
 
-        return CollaborationInvitation::create([
+        $invitation = CollaborationInvitation::create([
             'sender_id'       => $sender->id,
             'recipient_id'    => $data['recipient_id'],
             'project_id'      => $data['project_id'] ?? null,
@@ -90,6 +92,19 @@ class InvitationService
             'status'          => 'pending',
             'expires_at'      => $data['expires_at'] ?? now()->addDays(7),
         ]);
+
+        // Notify the recipient about the new invitation
+        $typeLabel = str_replace('_', ' ', $data['invitation_type']);
+        $this->notify(
+            userId:   $data['recipient_id'],
+            type:     'invitation_received',
+            title:    'New invitation',
+            body:     "{$sender->full_name} invited you: {$typeLabel}.",
+            data:     ['invitation_id' => $invitation->id, 'sender_id' => $sender->id],
+            priority: 'high',
+        );
+
+        return $invitation;
     }
 
     /**
@@ -122,7 +137,22 @@ class InvitationService
             'responded_at'     => now(),
         ]);
 
-        return $invitation->load(['sender', 'recipient', 'project']);
+        $loaded = $invitation->load(['sender', 'recipient', 'project']);
+
+        // Notify the sender of the response
+        $action = $data['action'];
+        $this->notify(
+            userId:   $invitation->sender_id,
+            type:     "invitation_{$action}",
+            title:    $action === 'accepted' ? 'Invitation accepted 🎉' : 'Invitation declined',
+            body:     $action === 'accepted'
+                          ? "{$user->full_name} accepted your invitation."
+                          : "{$user->full_name} declined your invitation.",
+            data:     ['invitation_id' => $invitation->id],
+            priority: $action === 'accepted' ? 'high' : 'normal',
+        );
+
+        return $loaded;
     }
 
     /**
@@ -144,5 +174,15 @@ class InvitationService
         }
 
         $invitation->update(['status' => 'withdrawn']);
+
+        // Notify the recipient that the invitation was withdrawn
+        $this->notify(
+            userId:   $invitation->recipient_id,
+            type:     'invitation_withdrawn',
+            title:    'Invitation withdrawn',
+            body:     "{$user->full_name} withdrew their invitation.",
+            data:     ['invitation_id' => $invitation->id],
+            priority: 'normal',
+        );
     }
 }
