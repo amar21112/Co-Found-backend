@@ -2,6 +2,12 @@
 
 namespace App\Exceptions;
 
+use App\Exceptions\Admin\RestrictionAlreadyLiftedException;
+use App\Exceptions\Admin\RestrictionNotFoundException;
+use App\Exceptions\Admin\VerificationAlreadyReviewedException;
+use App\Exceptions\Admin\VerificationNotClaimableException;
+use App\Exceptions\Admin\VerificationNotEscalatableException;
+use App\Exceptions\Admin\VerificationNotFoundException;
 use App\Exceptions\Auth\AccountLockedException;
 use App\Exceptions\Auth\AccountNotActiveException;
 use App\Exceptions\Auth\AccountRestrictedException;
@@ -36,6 +42,13 @@ class Handler extends ExceptionHandler
         EmailAlreadyVerifiedException::class,
         InvalidVerificationTokenException::class,
         InvalidPasswordResetTokenException::class,
+        // Admin exceptions
+        VerificationNotFoundException::class,
+        VerificationAlreadyReviewedException::class,
+        VerificationNotClaimableException::class,
+        VerificationNotEscalatableException::class,
+        RestrictionNotFoundException::class,
+        RestrictionAlreadyLiftedException::class,
     ];
 
     /**
@@ -85,6 +98,31 @@ class Handler extends ExceptionHandler
         );
 
         $this->renderable(fn(EmailAlreadyVerifiedException $e) =>
+        $this->authError($e->getMessage(), 409)
+        );
+
+        // ── Admin Exceptions ──────────────────────────────────────────────────
+        $this->renderable(fn(VerificationNotFoundException $e) =>
+        $this->authError($e->getMessage(), 404)
+        );
+
+        $this->renderable(fn(VerificationAlreadyReviewedException $e) =>
+        $this->authError($e->getMessage(), 409)
+        );
+
+        $this->renderable(fn(VerificationNotClaimableException $e) =>
+        $this->authError($e->getMessage(), 409)
+        );
+
+        $this->renderable(fn(VerificationNotEscalatableException $e) =>
+        $this->authError($e->getMessage(), 409)
+        );
+
+        $this->renderable(fn(RestrictionNotFoundException $e) =>
+        $this->authError($e->getMessage(), 404)
+        );
+
+        $this->renderable(fn(RestrictionAlreadyLiftedException $e) =>
         $this->authError($e->getMessage(), 409)
         );
 
