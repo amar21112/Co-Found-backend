@@ -19,7 +19,7 @@ class TokenTest extends AuthTestCase
         $user->createToken('other_device');
         Sanctum::actingAs($user);
 
-        $this->postJson('/api/auth/logout')
+        $this->postJson('/api/v1/auth/logout')
             ->assertStatus(200)
             ->assertJsonPath('status', 'success');
 
@@ -29,7 +29,7 @@ class TokenTest extends AuthTestCase
     /** @test */
     public function logout_requires_authentication(): void
     {
-        $this->postJson('/api/auth/logout')->assertStatus(401);
+        $this->postJson('/api/v1/auth/logout')->assertStatus(401);
     }
 
     // =========================================================================
@@ -42,7 +42,7 @@ class TokenTest extends AuthTestCase
         $user = $this->makeActiveUser(['email' => 'active@example.com']);
         Sanctum::actingAs($user);
 
-        $this->getJson('/api/auth/me')
+        $this->getJson('/api/v1/auth/me')
             ->assertStatus(200)
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('data.email', 'active@example.com');
@@ -54,7 +54,7 @@ class TokenTest extends AuthTestCase
         $guest = $this->makeGuestUser();
         Sanctum::actingAs($guest);
 
-        $this->getJson('/api/auth/me')
+        $this->getJson('/api/v1/auth/me')
             ->assertStatus(200)
             ->assertJsonPath('data.role', UserRole::Guest->value);
     }
@@ -62,7 +62,7 @@ class TokenTest extends AuthTestCase
     /** @test */
     public function me_requires_authentication(): void
     {
-        $this->getJson('/api/auth/me')->assertStatus(401);
+        $this->getJson('/api/v1/auth/me')->assertStatus(401);
     }
 
     // =========================================================================
@@ -76,7 +76,7 @@ class TokenTest extends AuthTestCase
         $plaintext = $user->createToken('api_token')->plainTextToken;
 
         $this->withToken($plaintext)
-            ->postJson('/api/auth/refresh')
+            ->postJson('/api/v1/auth/refresh')
             ->assertStatus(200)
             ->assertJsonStructure(['data' => ['access_token', 'token_type', 'user']]);
 
@@ -90,7 +90,7 @@ class TokenTest extends AuthTestCase
         $guest = $this->makeGuestUser();
         Sanctum::actingAs($guest);
 
-        $this->postJson('/api/auth/refresh')
+        $this->postJson('/api/v1/auth/refresh')
             ->assertStatus(200)
             ->assertJsonPath('data.user.role', UserRole::Guest->value);
     }
@@ -98,7 +98,7 @@ class TokenTest extends AuthTestCase
     /** @test */
     public function refresh_requires_authentication(): void
     {
-        $this->postJson('/api/auth/refresh')->assertStatus(401);
+        $this->postJson('/api/v1/auth/refresh')->assertStatus(401);
     }
 
     // =========================================================================
@@ -108,7 +108,7 @@ class TokenTest extends AuthTestCase
     /** @test */
     public function guest_endpoint_creates_ephemeral_user_with_guest_role(): void
     {
-        $this->postJson('/api/auth/guest')
+        $this->postJson('/api/v1/auth/guest')
             ->assertStatus(201)
             ->assertJsonStructure([
                 'status', 'message',
@@ -123,8 +123,8 @@ class TokenTest extends AuthTestCase
     /** @test */
     public function each_guest_call_creates_a_distinct_account(): void
     {
-        $this->postJson('/api/auth/guest')->assertStatus(201);
-        $this->postJson('/api/auth/guest')->assertStatus(201);
+        $this->postJson('/api/v1/auth/guest')->assertStatus(201);
+        $this->postJson('/api/v1/auth/guest')->assertStatus(201);
 
         $this->assertDatabaseCount('users', 2);
     }
@@ -135,7 +135,7 @@ class TokenTest extends AuthTestCase
         $guest = $this->makeGuestUser();
         Sanctum::actingAs($guest);
 
-        $this->postJson('/api/auth/email/resend')
+        $this->postJson('/api/v1/auth/email/resend')
             ->assertStatus(403)
             ->assertJsonPath('code', 'GUEST_ACCESS_RESTRICTED');
     }

@@ -20,7 +20,7 @@ class PasswordResetTest extends AuthTestCase
         Log::spy();
         $this->makeActiveUser(['email' => 'active@example.com']);
 
-        $this->postJson('/api/auth/password/forgot', ['email' => 'active@example.com'])
+        $this->postJson('/api/v1/auth/password/forgot', ['email' => 'active@example.com'])
             ->assertStatus(200)
             ->assertJsonPath('status', 'success');
     }
@@ -28,7 +28,7 @@ class PasswordResetTest extends AuthTestCase
     /** @test */
     public function forgot_password_returns_200_for_unknown_email_anti_enumeration(): void
     {
-        $this->postJson('/api/auth/password/forgot', ['email' => 'ghost@example.com'])
+        $this->postJson('/api/v1/auth/password/forgot', ['email' => 'ghost@example.com'])
             ->assertStatus(200);
     }
 
@@ -38,8 +38,8 @@ class PasswordResetTest extends AuthTestCase
         Log::spy();
         $this->makeActiveUser(['email' => 'active@example.com']);
 
-        $this->postJson('/api/auth/password/forgot', ['email' => 'active@example.com']);
-        $this->postJson('/api/auth/password/forgot', ['email' => 'active@example.com']);
+        $this->postJson('/api/v1/auth/password/forgot', ['email' => 'active@example.com']);
+        $this->postJson('/api/v1/auth/password/forgot', ['email' => 'active@example.com']);
 
         // Second call must invalidate the first — only one valid token exists
         $this->assertDatabaseCount('password_resets', 1);
@@ -48,7 +48,7 @@ class PasswordResetTest extends AuthTestCase
     /** @test */
     public function forgot_password_fails_with_invalid_email_format(): void
     {
-        $this->postJson('/api/auth/password/forgot', ['email' => 'not-an-email'])
+        $this->postJson('/api/v1/auth/password/forgot', ['email' => 'not-an-email'])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['email']);
     }
@@ -66,7 +66,7 @@ class PasswordResetTest extends AuthTestCase
         $user->createToken('device_2');
         $this->assertDatabaseCount('personal_access_tokens', 2);
 
-        $this->postJson('/api/auth/password/reset', [
+        $this->postJson('/api/v1/auth/password/reset', [
             'token'                 => $token,
             'password'              => 'NewSecret456',
             'password_confirmation' => 'NewSecret456',
@@ -83,7 +83,7 @@ class PasswordResetTest extends AuthTestCase
         $token   = $this->createValidResetToken($user);
         $resetId = PasswordReset::where('reset_token', $token)->value('id');
 
-        $this->postJson('/api/auth/password/reset', [
+        $this->postJson('/api/v1/auth/password/reset', [
             'token'                 => $token,
             'password'              => 'NewSecret456',
             'password_confirmation' => 'NewSecret456',
@@ -101,13 +101,13 @@ class PasswordResetTest extends AuthTestCase
         $user  = $this->makeActiveUser();
         $token = $this->createValidResetToken($user);
 
-        $this->postJson('/api/auth/password/reset', [
+        $this->postJson('/api/v1/auth/password/reset', [
             'token'                 => $token,
             'password'              => 'NewSecret456',
             'password_confirmation' => 'NewSecret456',
         ])->assertStatus(200);
 
-        $this->postJson('/api/auth/password/reset', [
+        $this->postJson('/api/v1/auth/password/reset', [
             'token'                 => $token,
             'password'              => 'AnotherPass789',
             'password_confirmation' => 'AnotherPass789',
@@ -117,7 +117,7 @@ class PasswordResetTest extends AuthTestCase
     /** @test */
     public function reset_password_fails_with_invalid_token(): void
     {
-        $this->postJson('/api/auth/password/reset', [
+        $this->postJson('/api/v1/auth/password/reset', [
             'token'                 => 'totally-fake-token',
             'password'              => 'NewSecret456',
             'password_confirmation' => 'NewSecret456',
@@ -135,7 +135,7 @@ class PasswordResetTest extends AuthTestCase
             'expires_at'  => now()->subMinute(),
         ]);
 
-        $this->postJson('/api/auth/password/reset', [
+        $this->postJson('/api/v1/auth/password/reset', [
             'token'                 => $token,
             'password'              => 'NewSecret456',
             'password_confirmation' => 'NewSecret456',
@@ -148,7 +148,7 @@ class PasswordResetTest extends AuthTestCase
         $user  = $this->makeActiveUser();
         $token = $this->createValidResetToken($user);
 
-        $this->postJson('/api/auth/password/reset', [
+        $this->postJson('/api/v1/auth/password/reset', [
             'token'                 => $token,
             'password'              => 'weakonly',
             'password_confirmation' => 'weakonly',
