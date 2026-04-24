@@ -4,11 +4,13 @@ namespace App\Services;
 
 use App\Models\CollaborationRating;
 use App\Models\User;
+use App\Traits\SendsNotifications;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\ValidationException;
 
 class RatingService
 {
+    use SendsNotifications;
     /**
      * List ratings received by a user.
      *
@@ -77,7 +79,19 @@ class RatingService
         $data['rater_id']       = $rater->id;
         $data['overall_rating'] = $this->computeOverall($data);
 
-        return CollaborationRating::create($data);
+        $rating = CollaborationRating::create($data);
+
+        // Notify the rated user
+        $this->notify(
+            userId:   $data['rated_user_id'],
+            type:     'new_rating',
+            title:    'You received a new rating',
+            body:     "{$rater->full_name} rated your collaboration.",
+            data:     ['rating_id' => $rating->id, 'rater_id' => $rater->id],
+            priority: 'normal',
+        );
+
+        return $rating;
     }
 
     /**

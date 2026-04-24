@@ -64,6 +64,7 @@ class ProjectServiceProvider extends ServiceProvider
         $this->app->bind(ProjectMilestoneService::class, function ($app) {
             return new ProjectMilestoneService(
                 $app->make(ProjectMilestoneRepositoryInterface::class),
+                $app->make(ProjectTeamRepositoryInterface::class),
             );
         });
 

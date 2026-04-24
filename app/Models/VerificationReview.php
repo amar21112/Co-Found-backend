@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\RejectionReasonCategory;
+use App\Enums\ReviewAction;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +25,8 @@ class VerificationReview extends Model
     ];
 
     protected $casts = [
+        'review_action' => ReviewAction::class,
+        'rejection_reason_category' => RejectionReasonCategory::class,
         'reviewed_at'              => 'datetime',
         'automated_checks_passed'  => 'boolean',
         'automated_checks_data'    => 'array',
