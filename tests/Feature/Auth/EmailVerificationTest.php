@@ -23,7 +23,7 @@ class EmailVerificationTest extends AuthTestCase
             'email_verification_expires' => now()->addHours(24),
         ]);
 
-        $this->getJson("/api/auth/email/verify/$token")
+        $this->getJson("/api/v1/auth/email/verify/$token")
             ->assertStatus(200)
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('data.email_verified', true)
@@ -39,7 +39,7 @@ class EmailVerificationTest extends AuthTestCase
     /** @test */
     public function email_verification_fails_with_completely_invalid_token(): void
     {
-        $this->getJson('/api/auth/email/verify/not-a-real-token')
+        $this->getJson('/api/v1/auth/email/verify/not-a-real-token')
             ->assertStatus(400);
     }
 
@@ -52,7 +52,7 @@ class EmailVerificationTest extends AuthTestCase
             'email_verification_expires' => now()->subHour(),
         ]);
 
-        $this->getJson("/api/auth/email/verify/$token")
+        $this->getJson("/api/v1/auth/email/verify/$token")
             ->assertStatus(400);
     }
 
@@ -67,7 +67,7 @@ class EmailVerificationTest extends AuthTestCase
             'email_verification_expires' => now()->addHours(24),
         ]);
 
-        $this->getJson("/api/auth/email/verify/$token")
+        $this->getJson("/api/v1/auth/email/verify/$token")
             ->assertStatus(409);
     }
 
@@ -86,7 +86,7 @@ class EmailVerificationTest extends AuthTestCase
         ]);
         Sanctum::actingAs($user);
 
-        $this->postJson('/api/auth/email/resend')
+        $this->postJson('/api/v1/auth/email/resend')
             ->assertStatus(200)
             ->assertJsonPath('status', 'success');
 
@@ -102,13 +102,13 @@ class EmailVerificationTest extends AuthTestCase
         $user = $this->makeActiveUser();
         Sanctum::actingAs($user);
 
-        $this->postJson('/api/auth/email/resend')->assertStatus(409);
+        $this->postJson('/api/v1/auth/email/resend')->assertStatus(409);
     }
 
     /** @test */
     public function resend_requires_authentication(): void
     {
-        $this->postJson('/api/auth/email/resend')->assertStatus(401);
+        $this->postJson('/api/v1/auth/email/resend')->assertStatus(401);
     }
 
     /** @test */
@@ -116,7 +116,7 @@ class EmailVerificationTest extends AuthTestCase
     {
         Sanctum::actingAs($this->makeGuestUser());
 
-        $this->postJson('/api/auth/email/resend')
+        $this->postJson('/api/v1/auth/email/resend')
             ->assertStatus(403)
             ->assertJsonPath('code', 'GUEST_ACCESS_RESTRICTED');
     }

@@ -14,7 +14,7 @@ class RegistrationTest extends AuthTestCase
     {
         Log::spy();
 
-        $response = $this->postJson('/api/auth/register', $this->registerPayload());
+        $response = $this->postJson('/api/v1/auth/register', $this->registerPayload());
 
         $response->assertStatus(201)
             ->assertJsonStructure([
@@ -43,7 +43,7 @@ class RegistrationTest extends AuthTestCase
     {
         Log::spy();
 
-        $this->postJson('/api/auth/register', $this->registerPayload())->assertStatus(201);
+        $this->postJson('/api/v1/auth/register', $this->registerPayload())->assertStatus(201);
 
         $user = User::where('email', 'john@example.com')->first();
         $this->assertNotNull($user->email_verification_token);
@@ -58,7 +58,7 @@ class RegistrationTest extends AuthTestCase
     {
         $this->makeActiveUser(['email' => 'john@example.com']);
 
-        $this->postJson('/api/auth/register', $this->registerPayload())
+        $this->postJson('/api/v1/auth/register', $this->registerPayload())
             ->assertStatus(422)
             ->assertJsonValidationErrors(['email']);
     }
@@ -68,7 +68,7 @@ class RegistrationTest extends AuthTestCase
     {
         $this->makeActiveUser(['username' => 'johndoe']);
 
-        $this->postJson('/api/auth/register', $this->registerPayload())
+        $this->postJson('/api/v1/auth/register', $this->registerPayload())
             ->assertStatus(422)
             ->assertJsonValidationErrors(['username']);
     }
@@ -76,7 +76,7 @@ class RegistrationTest extends AuthTestCase
     /** @test */
     public function register_fails_with_no_uppercase_in_password(): void
     {
-        $this->postJson('/api/auth/register', $this->registerPayload([
+        $this->postJson('/api/v1/auth/register', $this->registerPayload([
             'password'              => 'allowercase1',
             'password_confirmation' => 'allowercase1',
         ]))->assertStatus(422)->assertJsonValidationErrors(['password']);
@@ -85,7 +85,7 @@ class RegistrationTest extends AuthTestCase
     /** @test */
     public function register_fails_with_no_digit_in_password(): void
     {
-        $this->postJson('/api/auth/register', $this->registerPayload([
+        $this->postJson('/api/v1/auth/register', $this->registerPayload([
             'password'              => 'NoDigitHere',
             'password_confirmation' => 'NoDigitHere',
         ]))->assertStatus(422)->assertJsonValidationErrors(['password']);
@@ -94,7 +94,7 @@ class RegistrationTest extends AuthTestCase
     /** @test */
     public function register_fails_with_password_too_short(): void
     {
-        $this->postJson('/api/auth/register', $this->registerPayload([
+        $this->postJson('/api/v1/auth/register', $this->registerPayload([
             'password'              => 'Sh0rt',
             'password_confirmation' => 'Sh0rt',
         ]))->assertStatus(422)->assertJsonValidationErrors(['password']);
@@ -103,7 +103,7 @@ class RegistrationTest extends AuthTestCase
     /** @test */
     public function register_fails_when_passwords_do_not_match(): void
     {
-        $this->postJson('/api/auth/register', $this->registerPayload([
+        $this->postJson('/api/v1/auth/register', $this->registerPayload([
             'password_confirmation' => 'Different1',
         ]))->assertStatus(422)->assertJsonValidationErrors(['password']);
     }
@@ -111,7 +111,7 @@ class RegistrationTest extends AuthTestCase
     /** @test */
     public function register_fails_with_special_chars_in_username(): void
     {
-        $this->postJson('/api/auth/register', $this->registerPayload([
+        $this->postJson('/api/v1/auth/register', $this->registerPayload([
             'username' => 'john doe!',
         ]))->assertStatus(422)->assertJsonValidationErrors(['username']);
     }
@@ -119,7 +119,7 @@ class RegistrationTest extends AuthTestCase
     /** @test */
     public function register_fails_with_username_too_short(): void
     {
-        $this->postJson('/api/auth/register', $this->registerPayload([
+        $this->postJson('/api/v1/auth/register', $this->registerPayload([
             'username' => 'ab',
         ]))->assertStatus(422)->assertJsonValidationErrors(['username']);
     }
@@ -135,7 +135,7 @@ class RegistrationTest extends AuthTestCase
         $plaintext = $guest->createToken('guest_token')->plainTextToken;
 
         $this->withToken($plaintext)
-            ->postJson('/api/auth/register', $this->registerPayload())
+            ->postJson('/api/v1/auth/register', $this->registerPayload())
             ->assertStatus(201);
 
         // Guest row must be hard-deleted
@@ -153,7 +153,7 @@ class RegistrationTest extends AuthTestCase
         Log::spy();
         $otherGuest = $this->makeGuestUser();
 
-        $this->postJson('/api/auth/register', $this->registerPayload())
+        $this->postJson('/api/v1/auth/register', $this->registerPayload())
             ->assertStatus(201);
 
         // The unrelated guest row must still exist
@@ -163,7 +163,7 @@ class RegistrationTest extends AuthTestCase
     /** @test */
     public function register_fails_when_required_fields_missing(): void
     {
-        $this->postJson('/api/auth/register')
+        $this->postJson('/api/v1/auth/register')
             ->assertStatus(422)
             ->assertJsonValidationErrors(['email', 'username', 'password', 'full_name']);
     }

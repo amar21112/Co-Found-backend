@@ -15,7 +15,7 @@ class LoginTest extends AuthTestCase
     {
         $this->makeActiveUser(['email' => 'active@example.com']);
 
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => 'active@example.com', 'password' => 'Secret123',
         ])->assertStatus(200)
             ->assertJsonStructure([
@@ -34,7 +34,7 @@ class LoginTest extends AuthTestCase
         ]);
         $this->assertNull($user->last_login_at);
 
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => 'active@example.com', 'password' => 'Secret123',
         ])->assertStatus(200);
 
@@ -51,7 +51,7 @@ class LoginTest extends AuthTestCase
             'login_attempts' => 3,
         ]);
 
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => 'active@example.com', 'password' => 'Secret123',
         ])->assertStatus(200);
 
@@ -66,7 +66,7 @@ class LoginTest extends AuthTestCase
         $user->createToken('old_token_2');
         $this->assertDatabaseCount('personal_access_tokens', 2);
 
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => 'active@example.com', 'password' => 'Secret123',
         ])->assertStatus(200);
 
@@ -78,7 +78,7 @@ class LoginTest extends AuthTestCase
     {
         $this->makePendingUser(['email' => 'pending@example.com']);
 
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => 'pending@example.com', 'password' => 'Secret123',
         ])->assertStatus(200)
             ->assertJsonPath('data.user.account_status', AccountStatus::Pending->value);
@@ -89,7 +89,7 @@ class LoginTest extends AuthTestCase
     {
         $this->makeActiveUser(['email' => 'active@example.com']);
 
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => 'active@example.com', 'password' => 'WrongPass1',
         ])->assertStatus(401)->assertJsonPath('status', 'error');
     }
@@ -97,7 +97,7 @@ class LoginTest extends AuthTestCase
     /** @test */
     public function login_fails_for_non_existent_email(): void
     {
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => 'nobody@example.com', 'password' => 'Secret123',
         ])->assertStatus(401);
     }
@@ -108,7 +108,7 @@ class LoginTest extends AuthTestCase
         $user = $this->makeActiveUser(['email' => 'active@example.com']);
         $this->assertEquals(0, $user->login_attempts);
 
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => 'active@example.com', 'password' => 'WrongPass1',
         ])->assertStatus(401);
 
@@ -123,7 +123,7 @@ class LoginTest extends AuthTestCase
             'password' => Hash::make('Secret123'),
         ]);
 
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => 'suspended@example.com', 'password' => 'Secret123',
         ])->assertStatus(403);
     }
@@ -136,7 +136,7 @@ class LoginTest extends AuthTestCase
             'password' => Hash::make('Secret123'),
         ]);
 
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => 'banned@example.com', 'password' => 'Secret123',
         ])->assertStatus(403);
     }
@@ -147,12 +147,12 @@ class LoginTest extends AuthTestCase
         $this->makeActiveUser(['email' => 'active@example.com']);
 
         for ($i = 0; $i < 5; $i++) {
-            $this->postJson('/api/auth/login', [
+            $this->postJson('/api/v1/auth/login', [
                 'email' => 'active@example.com', 'password' => 'WrongPass1',
             ]);
         }
 
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => 'active@example.com', 'password' => 'Secret123',
         ])->assertStatus(423)
             ->assertJsonStructure(['status', 'message', 'locked_until']);
@@ -173,7 +173,7 @@ class LoginTest extends AuthTestCase
             'expires_at'       => now()->addDay(),
         ]);
 
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => $user->email, 'password' => 'Secret123',
         ])->assertStatus(403)
             ->assertJsonFragment(['message' => 'Your account has been restricted by an administrator. Please contact support.']);
@@ -194,7 +194,7 @@ class LoginTest extends AuthTestCase
             'expires_at'       => now()->subHour(),
         ]);
 
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => $user->email, 'password' => 'Secret123',
         ])->assertStatus(200);
     }
@@ -214,7 +214,7 @@ class LoginTest extends AuthTestCase
             'expires_at'       => now()->addDay(),
         ]);
 
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => $user->email, 'password' => 'Secret123',
         ])->assertStatus(200);
     }
@@ -227,7 +227,7 @@ class LoginTest extends AuthTestCase
             'password' => Hash::make('Secret123'),
         ]);
 
-        $this->postJson('/api/auth/login', [
+        $this->postJson('/api/v1/auth/login', [
             'email' => 'active@example.com', 'password' => 'Secret123',
         ])->assertStatus(200);
     }
@@ -235,7 +235,7 @@ class LoginTest extends AuthTestCase
     /** @test */
     public function login_fails_with_missing_fields(): void
     {
-        $this->postJson('/api/auth/login')
+        $this->postJson('/api/v1/auth/login')
             ->assertStatus(422)
             ->assertJsonValidationErrors(['email', 'password']);
     }
