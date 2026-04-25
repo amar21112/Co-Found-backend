@@ -191,13 +191,13 @@ return [
         App\Providers\AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
         App\Providers\AdminServiceProvider::class,
+        App\Providers\CallServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
 
         App\Providers\ProjectServiceProvider::class,
         App\Providers\ChatServiceProvider::class,
-        
     ],
 
     /*
