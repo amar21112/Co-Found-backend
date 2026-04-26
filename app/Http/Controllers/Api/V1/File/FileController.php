@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Api\V1\Chat;
+namespace App\Http\Controllers\Api\V1\File;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Chat\ShareFileRequest;
-use App\Http\Resources\Chat\FileResource;
-use App\Http\Resources\Chat\SharedFileResource;
+use App\Http\Requests\File\ShareFileRequest;
+use App\Http\Resources\File\FileResource;
+use App\Http\Resources\File\SharedFileResource;
 use App\Models\File;
-use App\Services\Chat\FileService;
+use App\Services\File\FileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -20,14 +20,22 @@ class FileController extends Controller
 
     /**
      * POST /api/v1/files
-     * Upload a file to S3. Returns the file metadata.
+     * Upload a file to local storage. Returns the file metadata.
      * The file is NOT shared anywhere until a shareInConversation call.
      */
     public function upload(Request $request): JsonResponse
     {
-        $request->validate([
-            'file' => 'required|file|max:51200', // 50 MB
-        ]);
+        try{
+            $request->validate([
+                'file' => 'required|file|max:51200', // 50 MB
+            ]);
+        }catch (\Exception $e){
+            return response()->json([
+                'message' => 'File validation failed.',
+                'data'    => $e->getMessage(),
+            ], 422);
+        }
+
 
         $file = $this->service->upload(
             uploader:     $request->user(),
@@ -61,7 +69,7 @@ class FileController extends Controller
 
         $this->service->delete($request->user(), $file);
 
-        return response()->json(['message' => 'File deleted.']);
+        return response()->json(['message' => 'File deleted.'] ,200);
     }
 
     /**

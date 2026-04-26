@@ -63,6 +63,7 @@ class ChatServiceProvider extends ServiceProvider
                 $app->make(FileRepositoryInterface::class),
                 $app->make(ConversationRepositoryInterface::class),
                 $app->make(FirebaseSyncService::class),
+                $app->make(MessageService::class),
             );
         });
 
