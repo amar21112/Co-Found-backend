@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Chat;
 
+use App\Http\Resources\File\SharedFileResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 

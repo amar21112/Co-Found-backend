@@ -12,7 +12,7 @@ class SendMessageRequest extends FormRequest
     {
         return [
             'content'               => 'required|string|max:10000',
-            'message_type'          => 'nullable|string|in:text,file,poll',
+            'message_type'          => 'nullable|string|in:text',
             'replied_to_message_id' => 'nullable|uuid|exists:messages,id',
             'formatted_content'     => 'nullable|array',
         ];
