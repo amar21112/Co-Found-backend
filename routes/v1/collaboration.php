@@ -40,11 +40,12 @@ Route::middleware(['auth:sanctum', 'no.guest', 'verified'])->group(function () {
 
     // ── Matches ───────────────────────────────────────────────────────────────
 
+    // Note: {matchId} not {match} — 'match' is a PHP 8 reserved keyword.
     Route::prefix('matches')->group(function () {
-        Route::get('/',                    [MatchController::class, 'index']);       // list (filterable)
-        Route::patch('/{match}/view',      [MatchController::class, 'markViewed']); // mark viewed
-        Route::patch('/{match}/save',      [MatchController::class, 'save']);        // toggle save
-        Route::post('/{match}/feedback',   [MatchController::class, 'feedback']);    // submit feedback
+        Route::get('/',                    [MatchController::class, 'index']);
+        Route::patch('/{matchId}/view',    [MatchController::class, 'view']);
+        Route::patch('/{matchId}/save',    [MatchController::class, 'save']);
+        Route::post('/{matchId}/feedback', [MatchController::class, 'feedback']);
     });
 
     // ── Ratings ───────────────────────────────────────────────────────────────

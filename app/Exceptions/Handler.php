@@ -24,6 +24,8 @@ use App\Exceptions\Call\CallNotFoundException;
 use App\Exceptions\Call\CallNotJoinableException;
 use App\Exceptions\Call\NotACallParticipantException;
 use App\Exceptions\Call\NotCallHostException;
+use App\Exceptions\Match\FeedbackAlreadySubmittedException;
+use App\Exceptions\Match\MatchNotFoundException;
 use DateTimeInterface;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
@@ -80,6 +82,9 @@ class Handler extends ExceptionHandler
         CallNotJoinableException::class,
         NotACallParticipantException::class,
         NotCallHostException::class,
+        // Match exceptions
+        MatchNotFoundException::class,
+        FeedbackAlreadySubmittedException::class,
     ];
 
     /**
@@ -202,6 +207,15 @@ class Handler extends ExceptionHandler
 
         $this->renderable(fn(NotCallHostException $e) =>
             $this->error($e->getMessage(), 403)
+        );
+
+        // ── Match Exceptions ──────────────────────────────────────────────────
+        $this->renderable(fn(MatchNotFoundException $e) =>
+            $this->authError($e->getMessage(), 404)
+        );
+
+        $this->renderable(fn(FeedbackAlreadySubmittedException $e) =>
+            $this->authError($e->getMessage(), 409)
         );
 
         $this->reportable(function (Throwable $e) {
