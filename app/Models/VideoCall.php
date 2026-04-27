@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\CallStatus;
+use App\Enums\CallType;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,10 +14,10 @@ class VideoCall extends Model
 {
     use HasFactory, HasUuids;
 
-    public $timestamps = false;
+    // Migration has timestamps() — keep $timestamps = true (default)
     protected $primaryKey = 'id';
-    public $incrementing = false;
-    protected $keyType = 'string';
+    public $incrementing  = false;
+    protected $keyType    = 'string';
 
     protected $fillable = [
         'call_type', 'conversation_id', 'project_id', 'initiated_by',
@@ -24,15 +26,16 @@ class VideoCall extends Model
     ];
 
     protected $casts = [
-        'start_time' => 'datetime',
-        'end_time' => 'datetime',
+        'call_type'        => CallType::class,
+        'status'           => CallStatus::class,
+        'start_time'       => 'datetime',
+        'end_time'         => 'datetime',
         'duration_seconds' => 'integer',
-        'created_at' => 'datetime',
     ];
 
     public function initiator(): BelongsTo
     {
-        return $this->belongsTo(User::class , 'initiated_by');
+        return $this->belongsTo(User::class, 'initiated_by');
     }
 
     public function conversation(): BelongsTo
@@ -47,19 +50,37 @@ class VideoCall extends Model
 
     public function participants(): HasMany
     {
-        return $this->hasMany(CallParticipant::class , 'call_id');
+        return $this->hasMany(CallParticipant::class, 'call_id');
+    }
+
+    public function activeParticipants(): HasMany
+    {
+        return $this->hasMany(CallParticipant::class, 'call_id')
+            ->whereNull('left_at');
     }
 
     public function isActive(): bool
     {
-        return $this->status === 'active';
+        return $this->status === CallStatus::Active;
     }
+
     public function isEnded(): bool
     {
-        return $this->status === 'ended';
+        return $this->status === CallStatus::Ended;
     }
+
     public function isScheduled(): bool
     {
-        return $this->status === 'scheduled';
+        return $this->status === CallStatus::Scheduled;
+    }
+
+    public function isTerminal(): bool
+    {
+        return $this->status->isTerminal();
+    }
+
+    public function hasParticipant(string $userId): bool
+    {
+        return $this->participants()->where('user_id', $userId)->exists();
     }
 }

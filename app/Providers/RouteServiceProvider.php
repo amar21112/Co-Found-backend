@@ -22,6 +22,11 @@ class RouteServiceProvider extends ServiceProvider
                 ->prefix('api')
                 ->group(base_path('routes/api.php'));
 
+            // Auth module
+            Route::middleware('api')
+                ->prefix('api/v1')
+                ->group(base_path('routes/v1/auth.php'));
+
             // Profile module
             Route::middleware('api')
                 ->prefix('api/v1')
@@ -31,6 +36,11 @@ class RouteServiceProvider extends ServiceProvider
             Route::middleware('api')
                 ->prefix('api/v1')
                 ->group(base_path('routes/v1/collaboration.php'));
+
+            // Calls module
+            Route::middleware('api')
+                ->prefix('api/v1')
+                ->group(base_path('routes/v1/calls.php'));
 
             // Admin module
             Route::middleware('api')

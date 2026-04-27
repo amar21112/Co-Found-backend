@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
+use App\Enums\CallParticipantRole;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CallParticipant extends Model
 {
-    use HasUuids;
+    use HasUuids, HasFactory;
 
     public $timestamps    = false;
     protected $primaryKey = 'id';
@@ -20,6 +22,7 @@ class CallParticipant extends Model
     ];
 
     protected $casts = [
+        'role'             => CallParticipantRole::class,
         'joined_at'        => 'datetime',
         'left_at'          => 'datetime',
         'duration_seconds' => 'integer',
@@ -35,5 +38,8 @@ class CallParticipant extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function isHost(): bool { return $this->role === 'host'; }
+    public function isHost(): bool
+    {
+        return $this->role === CallParticipantRole::Host;
+    }
 }

@@ -43,5 +43,5 @@ class SharedFile extends Model
         return $this->belongsTo(User::class, 'shared_by');
     }
 
-    public function isExpired(): bool { return $this->expires_at?->isPast(); }
+    public function isExpired(): bool { return $this->expires_at ? $this->expires_at->isPast() : false; }
 }

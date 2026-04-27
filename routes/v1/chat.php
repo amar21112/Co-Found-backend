@@ -2,9 +2,9 @@
 
 
 use App\Http\Controllers\Api\V1\Chat\ConversationController;
-use App\Http\Controllers\Api\V1\Chat\FileController;
 use App\Http\Controllers\Api\V1\Chat\MessageController;
 use App\Http\Controllers\Api\V1\Chat\NotificationController;
+use App\Http\Controllers\Api\V1\File\FileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -58,13 +58,6 @@ Route::middleware(['auth:sanctum','no.guest', 'verified',])->prefix('v1')->group
             Route::get('/files',  [FileController::class, 'indexShared']);
             Route::post('/files', [FileController::class, 'share']);
         });
-    });
-
-    // ── Files (standalone upload) ─────────────────────────────────────────────
-    Route::prefix('files')->group(function () {
-        Route::post('/',       [FileController::class, 'upload']);
-        Route::get('/{file}',  [FileController::class, 'show']);
-        Route::delete('/{file}', [FileController::class, 'destroy']);
     });
 
     // ── Notifications ─────────────────────────────────────────────────────────

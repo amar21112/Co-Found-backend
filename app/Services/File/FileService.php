@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Chat;
+namespace App\Services\File;
 
 use App\Exceptions\ChatException;
 use App\Exceptions\FileUploadException;
@@ -9,6 +9,7 @@ use App\Models\File;
 use App\Models\User;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\FileRepositoryInterface;
+use App\Services\Chat\MessageService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -16,10 +17,13 @@ use Illuminate\Support\Str;
 
 class FileService
 {
+    use \App\Traits\FileUploadTrait;
+
     public function __construct(
         private readonly FileRepositoryInterface         $fileRepo,
         private readonly ConversationRepositoryInterface $conversationRepo,
         private readonly FirebaseSyncService             $firebase,
+        private readonly MessageService                  $messageService,
     ) {}
 
     /**
@@ -38,16 +42,12 @@ class FileService
         if ($existing) return $existing;
 
         $extension = $uploadedFile->getClientOriginalExtension();
-        $storagePath = 'uploads/' . $uploader->id . '/' . Str::uuid() . '.' . $extension;
+        $directory = 'uploads/' . $uploader->id;
+        $filename = Str::uuid() . '.' . $extension;
 
-        $stored = Storage::disk('s3')->putFileAs(
-            dirname($storagePath),
-            $uploadedFile,
-            basename($storagePath),
-            'public'
-        );
+        $storagePath = $this->uploadFile($uploadedFile, $directory, 'public', $filename);
 
-        if (!$stored) {
+        if (!$storagePath) {
             throw new FileUploadException('Could not store the file. Please try again.');
         }
 
@@ -57,7 +57,7 @@ class FileService
             'file_size'        => $uploadedFile->getSize(),
             'mime_type'        => $uploadedFile->getMimeType(),
             'storage_path'     => $storagePath,
-            'public_url'       => Storage::disk('s3')->url($storagePath),
+            'public_url'       => $this->getFileUrl($storagePath, 'public'),
             'file_hash'        => $hash,
             'upload_completed' => true,
         ]);
@@ -81,6 +81,15 @@ class FileService
 
         if (!$this->conversationRepo->isParticipant($conversationId, $sharer->id)) {
             throw new \App\Exceptions\NotAParticipantException();
+        }
+
+        if (empty($options['message_id'])) {
+            $conversation = \App\Models\Conversation::findOrFail($conversationId);
+            $message = $this->messageService->send($sharer, $conversation, [
+                'message_type' => \App\Enums\MessageType::File->value,
+                'content'      => $file->file_name ?? 'Shared a file',
+            ]);
+            $options['message_id'] = $message->id;
         }
 
         $shared = $this->fileRepo->shareInConversation(
@@ -108,7 +117,7 @@ class FileService
             throw new ChatException('You can only delete your own files.', 403);
         }
 
-        Storage::disk('s3')->delete($file->storage_path);
+        $this->deleteFile($file->storage_path, 'public');
         $this->fileRepo->delete($file);
     }
 }

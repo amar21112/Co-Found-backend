@@ -19,6 +19,11 @@ use App\Exceptions\Auth\EmailAlreadyVerifiedException;
 use App\Exceptions\Auth\InvalidCredentialsException;
 use App\Exceptions\Auth\InvalidPasswordResetTokenException;
 use App\Exceptions\Auth\InvalidVerificationTokenException;
+use App\Exceptions\Call\CallAlreadyEndedException;
+use App\Exceptions\Call\CallNotFoundException;
+use App\Exceptions\Call\CallNotJoinableException;
+use App\Exceptions\Call\NotACallParticipantException;
+use App\Exceptions\Call\NotCallHostException;
 use DateTimeInterface;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
@@ -68,6 +73,13 @@ class Handler extends ExceptionHandler
 
         // Admin — settings
         SettingNotFoundException::class,
+
+        // Call exceptions
+        CallNotFoundException::class,
+        CallAlreadyEndedException::class,
+        CallNotJoinableException::class,
+        NotACallParticipantException::class,
+        NotCallHostException::class,
     ];
 
     /**
@@ -168,6 +180,28 @@ class Handler extends ExceptionHandler
 
         $this->renderable(fn(SettingNotFoundException $e) =>
             $this->error($e->getMessage(), 404)
+        );
+
+        // ── Call Exceptions ───────────────────────────────────────────────────
+
+        $this->renderable(fn(CallNotFoundException $e) =>
+            $this->error($e->getMessage(), 404)
+        );
+
+        $this->renderable(fn(CallAlreadyEndedException $e) =>
+            $this->error($e->getMessage(), 409)
+        );
+
+        $this->renderable(fn(CallNotJoinableException $e) =>
+            $this->error($e->getMessage(), 409)
+        );
+
+        $this->renderable(fn(NotACallParticipantException $e) =>
+            $this->error($e->getMessage(), 403)
+        );
+
+        $this->renderable(fn(NotCallHostException $e) =>
+            $this->error($e->getMessage(), 403)
         );
 
         $this->reportable(function (Throwable $e) {
