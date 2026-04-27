@@ -121,6 +121,27 @@ class AdministrationSeeder extends Seeder
 
         // Dismissed
         Report::factory(5)->create(['status' => 'dismissed']);
+
+        // ── Reports where BOTH sides have full identity verification data ──────
+        // These are useful for testing the admin detail view which shows the
+        // full identity_verification record for the reported user.
+        Report::factory(5)
+            ->withVerifiedUsers()
+            ->pending()
+            ->create();
+
+        Report::factory(3)
+            ->withVerifiedUsers()
+            ->create(['status' => 'under_review']);
+
+        Report::factory(2)
+            ->withVerifiedUsers()
+            ->create([
+                'status'            => 'resolved',
+                'resolution_action' => 'warning_issued',
+                'resolution_notes'  => 'Both users identity-verified; warning sent after review.',
+                'resolved_at'       => now(),
+            ]);
     }
 
     private function seedAdminActions(): void
