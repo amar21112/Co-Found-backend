@@ -21,6 +21,7 @@ use App\Repositories\Contracts\AdminSettingRepositoryInterface;
 use App\Repositories\Contracts\AdminSystemLogRepositoryInterface;
 use App\Repositories\Contracts\AdminUserRepositoryInterface;
 use App\Repositories\Contracts\AdminVerificationRepositoryInterface;
+use App\Repositories\Contracts\IdentityVerificationRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 
 // ── Eloquent implementations ──────────────────────────────────────────────────
@@ -76,6 +77,7 @@ class AdminServiceProvider extends ServiceProvider
                 $app->make(AdminVerificationRepositoryInterface::class),
                 $app->make(UserRepositoryInterface::class),
                 $app->make(AdminActionLogger::class),
+                $app->make(IdentityVerificationRepositoryInterface::class),
             );
         });
 
