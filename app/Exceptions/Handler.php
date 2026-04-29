@@ -211,11 +211,11 @@ class Handler extends ExceptionHandler
 
         // ── Match Exceptions ──────────────────────────────────────────────────
         $this->renderable(fn(MatchNotFoundException $e) =>
-            $this->authError($e->getMessage(), 404)
+            $this->error($e->getMessage(), 404)
         );
 
         $this->renderable(fn(FeedbackAlreadySubmittedException $e) =>
-            $this->authError($e->getMessage(), 409)
+            $this->error($e->getMessage(), 409)
         );
 
         $this->reportable(function (Throwable $e) {
