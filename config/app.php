@@ -193,6 +193,7 @@ return [
         App\Providers\AdminServiceProvider::class,
         App\Providers\CallServiceProvider::class,
         App\Providers\MatchServiceProvider::class,
+        App\Providers\VerificationServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
