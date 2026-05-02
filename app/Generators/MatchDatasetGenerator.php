@@ -9,8 +9,6 @@ use App\Models\MatchFeedback;
 use App\Models\MatchModel;
 use App\Models\Project;
 use App\Models\User;
-use Faker\Factory;
-use Faker\Generator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -18,14 +16,15 @@ use Illuminate\Support\Str;
 /**
  * MatchDatasetGenerator
  *
- * Owns all synthetic training data generation logic.
- * Both MLMatchDatasetSeeder (CLI) and MatchService::generateDataset() (HTTP API)
+ * Generates synthetic match training data.
+ * No Faker dependency — uses native PHP random functions so it is safe
+ * to autoload and call in any environment including production.
+ *
+ * Both MLMatchDatasetSeeder (CLI) and MatchService::generateDataset() (HTTP)
  * delegate here — neither depends on the other.
  */
 class MatchDatasetGenerator
 {
-    private Generator $faker;
-
     private const SKILL_POOL = [
         'PHP', 'Laravel', 'JavaScript', 'TypeScript', 'React', 'Vue.js',
         'Node.js', 'Python', 'Django', 'FastAPI', 'Java', 'Spring Boot',
@@ -43,10 +42,9 @@ class MatchDatasetGenerator
         'Singapore', 'Sydney, Australia', 'Remote',
     ];
 
-    public function __construct()
-    {
-        $this->faker = Factory::create();
-    }
+    // =========================================================================
+    // Public entry point
+    // =========================================================================
 
     /**
      * @return array{users: int, projects: int, collaborator_matches: int, project_matches: int}
@@ -76,18 +74,23 @@ class MatchDatasetGenerator
         ];
     }
 
+    // =========================================================================
+    // User seeding
+    // =========================================================================
+
     private function seedProfiledUsers(int $count): Collection
     {
         return collect(range(1, $count))->map(function () {
             $user = User::factory()->create([
-                'location'                    => $this->faker->randomElement(self::LOCATIONS),
-                'identity_verified'           => $this->faker->boolean(60),
-                'identity_verification_level' => $this->faker->boolean(60)
+                'location'                    => self::LOCATIONS[array_rand(self::LOCATIONS)],
+                'identity_verified'           => $this->chance(60),
+                'identity_verification_level' => $this->chance(60)
                     ? IdentityVerificationLevel::Advanced->value
                     : IdentityVerificationLevel::None->value,
             ]);
 
-            foreach (collect(self::SKILL_POOL)->shuffle()->take(rand(3, 8)) as $skill) {
+            $skills = collect(self::SKILL_POOL)->shuffle()->take(rand(3, 8));
+            foreach ($skills as $skill) {
                 DB::table('user_skills')->insertOrIgnore([
                     'id'                => (string) Str::uuid(),
                     'user_id'           => $user->id,
@@ -104,23 +107,36 @@ class MatchDatasetGenerator
         });
     }
 
+    // =========================================================================
+    // Project seeding
+    // =========================================================================
+
     private function seedProjectsWithRoles(int $count): Collection
     {
         return collect(range(1, $count))->map(function () {
-            $project = Project::factory()->create(['owner_id' => User::inRandomOrder()->first()->id]);
+            $project = Project::factory()->create([
+                'owner_id' => User::inRandomOrder()->first()->id,
+            ]);
 
-            foreach (collect(self::SKILL_POOL)->shuffle()->take(rand(2, 4)) as $skill) {
+            $skills = collect(self::SKILL_POOL)->shuffle()->take(rand(2, 4));
+            foreach ($skills as $skill) {
                 DB::table('project_skills')->insertOrIgnore([
                     'id'          => (string) Str::uuid(),
                     'project_id'  => $project->id,
                     'skill_name'  => $skill,
-                    'is_required' => true
+                    'is_required' => true,
+                    'created_at'  => now(),
+                    'updated_at'  => now(),
                 ]);
             }
 
             return $project;
         });
     }
+
+    // =========================================================================
+    // Match generation
+    // =========================================================================
 
     private function generateCollaboratorMatches(Collection $users, int $target): int
     {
@@ -137,6 +153,7 @@ class MatchDatasetGenerator
             $score     = $this->computeCollaboratorScore($features);
             $matchId   = (string) Str::uuid();
             $createdAt = now()->subDays(rand(0, 90));
+            $viewed    = $this->chance(70);
 
             DB::table('matches')->insert([
                 'id'                  => $matchId,
@@ -146,10 +163,10 @@ class MatchDatasetGenerator
                 'match_type'          => MatchType::Collaborator->value,
                 'compatibility_score' => $score,
                 'match_reasons'       => json_encode($features),
-                'viewed'              => $this->faker->boolean(70),
-                'viewed_at'           => $this->faker->boolean(70) ? now()->subHours(rand(1, 720)) : null,
-                'saved'               => $this->faker->boolean(20),
-                'action_taken'        => $this->faker->boolean(30),
+                'viewed'              => $viewed,
+                'viewed_at'           => $viewed ? now()->subHours(rand(1, 720)) : null,
+                'saved'               => $this->chance(20),
+                'action_taken'        => $this->chance(30),
                 'expires_at'          => now()->addDays(rand(7, 60)),
                 'created_at'          => $createdAt,
                 'updated_at'          => $createdAt,
@@ -172,7 +189,7 @@ class MatchDatasetGenerator
             $project = $projects->random();
             if ($project->owner_id === $user->id) continue;
 
-            $key = "{$user->id}_$project->id";
+            $key = "{$user->id}_{$project->id}";
             if (isset($pairs[$key])) continue;
             $pairs[$key] = true;
 
@@ -180,6 +197,7 @@ class MatchDatasetGenerator
             $score     = $this->computeProjectScore($features);
             $matchId   = (string) Str::uuid();
             $createdAt = now()->subDays(rand(0, 90));
+            $viewed    = $this->chance(65);
 
             DB::table('matches')->insert([
                 'id'                  => $matchId,
@@ -189,10 +207,10 @@ class MatchDatasetGenerator
                 'match_type'          => MatchType::Project->value,
                 'compatibility_score' => $score,
                 'match_reasons'       => json_encode($features),
-                'viewed'              => $this->faker->boolean(65),
-                'viewed_at'           => $this->faker->boolean(65) ? now()->subHours(rand(1, 720)) : null,
-                'saved'               => $this->faker->boolean(25),
-                'action_taken'        => $this->faker->boolean(35),
+                'viewed'              => $viewed,
+                'viewed_at'           => $viewed ? now()->subHours(rand(1, 720)) : null,
+                'saved'               => $this->chance(25),
+                'action_taken'        => $this->chance(35),
                 'expires_at'          => now()->addDays(rand(7, 30)),
                 'created_at'          => $createdAt,
                 'updated_at'          => $createdAt,
@@ -204,6 +222,10 @@ class MatchDatasetGenerator
 
         return $created;
     }
+
+    // =========================================================================
+    // Feature computation
+    // =========================================================================
 
     private function computeUserFeatures(User $userA, User $userB): array
     {
@@ -247,6 +269,10 @@ class MatchDatasetGenerator
         ];
     }
 
+    // =========================================================================
+    // Score computation
+    // =========================================================================
+
     private function computeCollaboratorScore(array $f): float
     {
         return round(min(max(
@@ -269,11 +295,15 @@ class MatchDatasetGenerator
             0.01), 1.0), 4);
     }
 
+    // =========================================================================
+    // Feedback simulation
+    // =========================================================================
+
     private function simulateFeedback(MatchModel $match, User $user, float $score): void
     {
-        if (! $this->faker->boolean(60)) return;
+        if (! $this->chance(60)) return;
 
-        $rand = $this->faker->numberBetween(1, 100);
+        $rand = rand(1, 100);
 
         if ($score >= 0.80) {
             $type = $rand <= 70 ? FeedbackType::Relevant : ($rand <= 85 ? FeedbackType::AlreadyConnected : FeedbackType::NotInterested);
@@ -283,10 +313,27 @@ class MatchDatasetGenerator
             $type = $rand <= 20 ? FeedbackType::Relevant : ($rand <= 70 ? FeedbackType::NotRelevant : FeedbackType::NotInterested);
         }
 
-        MatchFeedback::create(['match_id' => $match->id, 'user_id' => $user->id, 'feedback_type' => $type->value]);
+        MatchFeedback::create([
+            'match_id'      => $match->id,
+            'user_id'       => $user->id,
+            'feedback_type' => $type->value,
+        ]);
 
         if (! $match->action_taken) {
             $match->update(['action_taken' => true]);
         }
+    }
+
+    // =========================================================================
+    // Helpers
+    // =========================================================================
+
+    /**
+     * Returns true with the given percentage probability (0–100).
+     * Replaces Faker's boolean($weight) with no external dependency.
+     */
+    private function chance(int $percent): bool
+    {
+        return rand(1, 100) <= $percent;
     }
 }
