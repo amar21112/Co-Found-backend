@@ -2,19 +2,25 @@
 
 namespace App\Services;
 
+use App\DTOs\Match\ExportDatasetDTO;
+use App\DTOs\Match\GenerateDatasetDTO;
+use App\DTOs\Match\IngestMatchDTO;
 use App\DTOs\Match\SubmitFeedbackDTO;
 use App\Exceptions\Match\FeedbackAlreadySubmittedException;
 use App\Exceptions\Match\MatchNotFoundException;
+use App\Generators\MatchDatasetGenerator;
 use App\Models\MatchFeedback;
 use App\Models\MatchModel;
 use App\Models\User;
 use App\Repositories\Contracts\MatchRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
-class MatchService
+readonly class MatchService
 {
     public function __construct(
-        private readonly MatchRepositoryInterface $matchRepo,
+        private MatchRepositoryInterface $matchRepo,
+        private MatchDatasetGenerator    $generator,
     ) {}
 
     // =========================================================================
@@ -103,6 +109,57 @@ class MatchService
         $this->matchRepo->markActionTaken($match);
 
         return $feedback;
+    }
+
+    // =========================================================================
+    // ML methods
+    // =========================================================================
+
+    /**
+     * Generate a synthetic training dataset.
+     * Delegates to MatchDatasetGenerator — no dependency on the seeder.
+     *
+     * @return array{users: int, projects: int, collaborator_matches: int, project_matches: int}
+     */
+    public function generateDataset(GenerateDatasetDTO $dto): array
+    {
+        return $this->generator->generate(
+            users:             $dto->users,
+            projects:          $dto->projects,
+            collaboratorPairs: $dto->collaboratorPairs,
+            projectPairs:      $dto->projectPairs,
+            fresh:             $dto->fresh,
+        );
+    }
+
+    /**
+     * Export flattened training data.
+     * Single source of truth in the repository.
+     *
+     * @return Collection<int, array>
+     */
+    public function exportTrainingData(ExportDatasetDTO $dto): Collection
+    {
+        return $this->matchRepo->exportTrainingData($dto);
+    }
+
+    /**
+     * Dataset statistics for the ML team's health check.
+     */
+    public function datasetStats(): array
+    {
+        return $this->matchRepo->datasetStats();
+    }
+
+    /**
+     * Upsert ML-scored match records into the matches table.
+     *
+     * @param  IngestMatchDTO[]  $dtos
+     * @return array{created: int, updated: int}
+     */
+    public function ingestBatch(array $dtos): array
+    {
+        return $this->matchRepo->ingestBatch($dtos);
     }
 
     // =========================================================================
