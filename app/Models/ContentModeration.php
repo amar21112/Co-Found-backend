@@ -15,6 +15,8 @@ class ContentModeration extends Model
     public $incrementing = false;
     protected $keyType = 'string';
 
+    protected $table = 'content_moderation';
+
     protected $fillable = [
         'moderator_id', 'content_type', 'content_id',
         'moderation_type', 'original_content', 'moderated_content',

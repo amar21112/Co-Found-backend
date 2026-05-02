@@ -52,6 +52,16 @@ class RouteServiceProvider extends ServiceProvider
                 ->prefix('api/v1')
                 ->group(base_path('routes/v1/ml.php'));
 
+            // User Reports module
+            Route::middleware('api')
+                ->prefix('api/v1')
+                ->group(base_path('routes/v1/reports.php'));
+
+            // Identity Verification module
+            Route::middleware('api')
+                ->prefix('api/v1')
+                ->group(base_path('routes/v1/verification.php'));
+
             // Web routes
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));

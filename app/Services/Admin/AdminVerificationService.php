@@ -10,18 +10,21 @@ use App\Exceptions\Admin\VerificationAlreadyReviewedException;
 use App\Exceptions\Admin\VerificationNotClaimableException;
 use App\Exceptions\Admin\VerificationNotEscalatableException;
 use App\Exceptions\Admin\VerificationNotFoundException;
+use App\Exceptions\Verification\DuplicateIdentityCardException;
 use App\Models\IdentityVerification;
 use App\Models\User;
 use App\Repositories\Contracts\AdminVerificationRepositoryInterface;
+use App\Repositories\Contracts\IdentityVerificationRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
-class AdminVerificationService
+readonly class AdminVerificationService
 {
     public function __construct(
-        private readonly AdminVerificationRepositoryInterface $verificationRepo,
-        private readonly UserRepositoryInterface              $userRepo,
-        private readonly AdminActionLogger                    $logger,
+        private AdminVerificationRepositoryInterface    $verificationRepo,
+        private UserRepositoryInterface                 $userRepo,
+        private AdminActionLogger                       $logger,
+        private IdentityVerificationRepositoryInterface $identityVerificationRepo,
     ) {}
 
     // =========================================================================
@@ -72,6 +75,21 @@ class AdminVerificationService
         // Guard — terminal states cannot be re-reviewed
         if ($verification->isVerified() || $verification->isRejected()) {
             throw new VerificationAlreadyReviewedException();
+        }
+
+        // ── Safety net: check id_card_number uniqueness before approving ──────
+        // Even if the submission check passed, a race condition could allow two
+        // users to submit the same card number before either is approved.
+        // We check again here — at the point of approval — as the authoritative guard.
+        if ($dto->reviewAction === ReviewAction::Approved
+            && $verification->id_card_number_hash
+        ) {
+            if ($this->identityVerificationRepo->hashAlreadyVerified(
+                $verification->id_card_number_hash,
+                $verification->user_id
+            )) {
+                throw new DuplicateIdentityCardException();
+            }
         }
 
         // Create the review record — use enum ->value for write safety

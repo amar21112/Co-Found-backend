@@ -20,7 +20,7 @@ return new class extends Migration
             $table->json('evidence')->nullable();
             $table->enum('status', ['pending', 'under_review', 'resolved', 'dismissed', 'escalated'])
                 ->default('pending');
-            $table->enum('priority', ['high', 'medium', 'low'])->default('medium');
+            $table->enum('priority', ['critical', 'high', 'medium', 'low'])->default('medium');
             $table->uuid('assigned_to')->nullable();
             $table->uuid('resolved_by')->nullable();
             $table->string('resolution_action')->nullable();
