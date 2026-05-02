@@ -68,5 +68,6 @@ class Kernel extends HttpKernel
         'no.guest'         => \App\Http\Middleware\RestrictGuestAccess::class,
         'guest.content'    => \App\Http\Middleware\GuestContentMiddleware::class,
         'chat.participant' => \App\Http\Middleware\EnsureConversationParticipant::class,
+        'auth.ml'          => \App\Http\Middleware\AuthenticateMlService::class,
     ];
 }

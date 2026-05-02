@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Generators\MatchDatasetGenerator;
 use App\Repositories\Contracts\MatchRepositoryInterface;
 use App\Repositories\Eloquent\MatchRepository;
 use App\Services\MatchService;
@@ -16,9 +17,12 @@ class MatchServiceProvider extends ServiceProvider
             MatchRepository::class
         );
 
+        $this->app->bind(MatchDatasetGenerator::class, fn() => new MatchDatasetGenerator());
+
         $this->app->bind(MatchService::class, function ($app) {
             return new MatchService(
                 $app->make(MatchRepositoryInterface::class),
+                $app->make(MatchDatasetGenerator::class),
             );
         });
     }
