@@ -124,9 +124,7 @@ class MatchDatasetGenerator
                     'id'          => (string) Str::uuid(),
                     'project_id'  => $project->id,
                     'skill_name'  => $skill,
-                    'is_required' => true,
-                    'created_at'  => now(),
-                    'updated_at'  => now(),
+                    'is_required' => true
                 ]);
             }
 
