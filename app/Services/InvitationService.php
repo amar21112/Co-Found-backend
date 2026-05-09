@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\ConflictException;
 use App\Models\CollaborationInvitation;
 use App\Models\User;
 use App\Traits\SendsNotifications;
@@ -11,6 +12,7 @@ use Illuminate\Validation\ValidationException;
 class InvitationService
 {
     use SendsNotifications;
+
     /**
      * List invitations for the user (sent + received).
      *
@@ -60,7 +62,7 @@ class InvitationService
     /**
      * Send a new invitation.
      *
-     * @throws ValidationException
+     * @throws ValidationException|ConflictException
      */
     public function send(User $sender, array $data): CollaborationInvitation
     {
@@ -77,9 +79,7 @@ class InvitationService
             ->exists();
 
         if ($duplicate) {
-            throw ValidationException::withMessages([
-                'invitation_type' => ['You already have a pending invitation of this type to this user.'],
-            ]);
+            throw new ConflictException('You already have a pending invitation of this type to this user.');
         }
 
         $invitation = CollaborationInvitation::create([
@@ -111,7 +111,7 @@ class InvitationService
      * Respond to a received invitation (accept or decline).
      * Only the recipient can respond.
      *
-     * @throws ValidationException
+     * @throws ConflictException
      */
     public function respond(User $user, CollaborationInvitation $invitation, array $data): CollaborationInvitation
     {
@@ -120,15 +120,11 @@ class InvitationService
         }
 
         if ($invitation->status !== 'pending') {
-            throw ValidationException::withMessages([
-                'invitation' => ['This invitation is no longer pending.'],
-            ]);
+            throw new ConflictException('This invitation is no longer pending.');
         }
 
         if ($invitation->isExpired()) {
-            throw ValidationException::withMessages([
-                'invitation' => ['This invitation has expired.'],
-            ]);
+            throw new ConflictException('This invitation has expired.');
         }
 
         $invitation->update([
@@ -146,8 +142,8 @@ class InvitationService
             type:     "invitation_{$action}",
             title:    $action === 'accepted' ? 'Invitation accepted 🎉' : 'Invitation declined',
             body:     $action === 'accepted'
-                          ? "{$user->full_name} accepted your invitation."
-                          : "{$user->full_name} declined your invitation.",
+                ? "{$user->full_name} accepted your invitation."
+                : "{$user->full_name} declined your invitation.",
             data:     ['invitation_id' => $invitation->id],
             priority: $action === 'accepted' ? 'high' : 'normal',
         );
@@ -159,7 +155,7 @@ class InvitationService
      * Withdraw a sent pending invitation.
      * Only the sender can withdraw.
      *
-     * @throws ValidationException
+     * @throws ConflictException
      */
     public function withdraw(User $user, CollaborationInvitation $invitation): void
     {
@@ -168,9 +164,7 @@ class InvitationService
         }
 
         if ($invitation->status !== 'pending') {
-            throw ValidationException::withMessages([
-                'invitation' => ['Only pending invitations can be withdrawn.'],
-            ]);
+            throw new ConflictException('Only pending invitations can be withdrawn.');
         }
 
         $invitation->update(['status' => 'withdrawn']);
