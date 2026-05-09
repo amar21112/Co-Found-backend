@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Exceptions\ConflictException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Report\StoreReportRequest;
 use App\Http\Requests\Report\UpdateReportRequest;
 use App\Http\Resources\Report\UserReportResource;
+use App\Models\Report;
 use App\Services\Report\ReportService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use InvalidArgumentException;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response;
 
 class ReportController extends Controller
 {
@@ -39,69 +43,76 @@ class ReportController extends Controller
 
     public function show(Request $request, string $id): JsonResponse
     {
-        try {
-            $report = $this->reportService->showOwnReport($id, $request->user());
+        $report = $this->reportService->showOwnReport($id, $request->user());
 
-            return response()->json([
-                'status' => 'success',
-                'data'   => new UserReportResource($report),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 404);
-        }
+        return response()->json([
+            'status' => 'success',
+            'data'   => new UserReportResource($report),
+        ]);
     }
 
+    /**
+     * @throws ValidationException
+     */
     public function store(StoreReportRequest $request): JsonResponse
     {
-        try {
-            $report = $this->reportService->createReport(
-                $request->getDto($request->user()->id)
-            );
+        $report = $this->reportService->createReport(
+            $request->getDto($request->user()->id)
+        );
 
-            return response()->json([
-                'status'  => 'success',
-                'message' => 'Report submitted successfully.',
-                'data'    => new UserReportResource($report),
-            ], 201);
-        } catch (InvalidArgumentException $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
-        }
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Report submitted successfully.',
+            'data'    => new UserReportResource($report),
+        ], Response::HTTP_CREATED);
     }
 
+    /**
+     * @throws ConflictException
+     */
     public function update(UpdateReportRequest $request, string $id): JsonResponse
     {
-        try {
-            $report = $this->reportService->updateOwnReport(
-                $id,
-                $request->user(),
-                $request->getDto()
-            );
+        $report = $this->reportService->updateOwnReport(
+            $id,
+            $request->user(),
+            $request->getDto()
+        );
 
-            return response()->json([
-                'status'  => 'success',
-                'message' => 'Report updated successfully.',
-                'data'    => new UserReportResource($report),
-            ]);
-        } catch (InvalidArgumentException $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
-        } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 404);
-        }
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Report updated successfully.',
+            'data'    => new UserReportResource($report),
+        ]);
     }
 
-    public function destroy(Request $request, string $id): JsonResponse
+    /**
+     * Soft withdraw — any report owner
+     *
+     * @throws ConflictException
+     */
+    public function withdraw(Request $request, string $id): JsonResponse
     {
-        try {
-            $this->reportService->withdrawOwnReport($id, $request->user());
+        $this->reportService->withdrawOwnReport($id, $request->user());
 
-            return response()->json([
-                'status'  => 'success',
-                'message' => 'Report withdrawn successfully.',
-            ]);
-        } catch (InvalidArgumentException $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
-        } catch (\Exception $e) {
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 404);
-        }
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Report withdrawn successfully.',
+        ]);
+    }
+
+    /**
+     * Hard delete — admin only
+     * @throws AuthorizationException
+     */
+    public function destroy(string $id): JsonResponse
+    {
+        $this->authorize('moderate', Report::class);
+
+        $this->reportService->deleteReport($id);
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Report permanently deleted.',
+        ]);
     }
 }
