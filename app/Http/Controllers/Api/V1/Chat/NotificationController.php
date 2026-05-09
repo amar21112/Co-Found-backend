@@ -35,9 +35,13 @@ class NotificationController extends Controller
             perPage: (int) $request->input('per_page', 20),
         );
 
+        $paginatedData = NotificationResource::collection($paginator)->response()->getData();
+
         return response()->json([
             'unread_count' => $unreadCount,
-            'data'         => NotificationResource::collection($paginator)->response()->getData(),
+            'data'         => $paginatedData->data,      // ← Just the notifications array
+            'meta'         => $paginatedData->meta,       // ← Pagination meta
+            'links'        => $paginatedData->links,      // ← Pagination links
         ]);
     }
 

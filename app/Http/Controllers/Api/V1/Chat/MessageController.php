@@ -144,7 +144,7 @@ class MessageController extends Controller
             reaction: $request->validated('reaction'),
         );
 
-        return response()->json(['message' => 'Reaction added.'], 201);
+        return response()->json(['message' => 'Reaction added.']);
     }
 
     /**
