@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Exceptions\Skill\DuplicateEndorsementException;
+use App\Exceptions\Skill\DuplicateSkillException;
+use App\Exceptions\Skill\EndorsementNotFoundException;
 use App\Models\User;
 use App\Models\UserSkill;
 use App\Models\SkillEndorsement;
@@ -48,7 +51,7 @@ class SkillService
     /**
      * Add a new skill to the user's profile.
      *
-     * @throws ValidationException
+     * @throws DuplicateSkillException
      */
     public function store(User $user, array $data): UserSkill
     {
@@ -57,9 +60,7 @@ class SkillService
             ->exists();
 
         if ($exists) {
-            throw ValidationException::withMessages([
-                'skill_name' => ['You already have this skill on your profile.'],
-            ]);
+            throw new DuplicateSkillException();
         }
 
         $data['is_approved'] = true;
@@ -90,7 +91,7 @@ class SkillService
     /**
      * Endorse a skill.
      *
-     * @throws ValidationException
+     * @throws ValidationException|DuplicateEndorsementException
      */
     public function endorse(User $endorser, UserSkill $skill): SkillEndorsement
     {
@@ -105,9 +106,7 @@ class SkillService
             ->exists();
 
         if ($already) {
-            throw ValidationException::withMessages([
-                'skill' => ['You have already endorsed this skill.'],
-            ]);
+            throw new DuplicateEndorsementException();
         }
 
         $endorsement = SkillEndorsement::create([
@@ -129,7 +128,7 @@ class SkillService
     /**
      * Remove an endorsement placed by the given user.
      *
-     * @throws ValidationException
+     * @throws EndorsementNotFoundException
      */
     public function unendorse(User $endorser, UserSkill $skill): void
     {
@@ -138,9 +137,7 @@ class SkillService
             ->delete();
 
         if (! $deleted) {
-            throw ValidationException::withMessages([
-                'skill' => ['You have not endorsed this skill.'],
-            ]);
+            throw new EndorsementNotFoundException();
         }
     }
 

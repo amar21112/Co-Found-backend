@@ -31,7 +31,7 @@ class UserResource extends JsonResource
             // ── Contact / external links — hidden from guests ─────────────────
             // Guests must register to access contact info. This prevents
             // scraping user data before committing to the platform.
-            'email'       => $isOwner || !$isGuest ? $this->email       : null,
+            'email'       => !$isGuest && ($isOwner || true) ? $this->email       : null,
             'website_url' => $isOwner || !$isGuest ? $this->website_url : null,
             'linkedin_url'=> $isOwner || !$isGuest ? $this->linkedin_url: null,
             'github_url'  => $isOwner || !$isGuest ? $this->github_url  : null,
