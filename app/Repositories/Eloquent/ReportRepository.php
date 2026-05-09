@@ -40,6 +40,11 @@ class ReportRepository implements ReportRepositoryInterface
             ->first();
     }
 
+    public function findById(string $id): ?Report
+    {
+        return Report::where('id', $id)->first();
+    }
+
     public function store(StoreReportDTO $dto): Report
     {
         return Report::create([
@@ -79,6 +84,11 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function delete(Report $report): void
     {
-        $report->delete(); // Or forceDelete() if there's no SoftDeletes
+        $report->delete();
+    }
+
+    public function withdraw(Report $report): void
+    {
+        $report->update(['status' => 'withdrawn']);
     }
 }

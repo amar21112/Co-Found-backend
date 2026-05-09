@@ -13,9 +13,13 @@ interface ReportRepositoryInterface
 
     public function findByIdAndUser(string $id, string $userId): ?Report;
 
+    public function findById(string $id): ?Report;
+
     public function store(StoreReportDTO $dto): Report;
 
     public function update(Report $report, UpdateReportDTO $dto): Report;
 
     public function delete(Report $report): void;
+
+    public function withdraw(Report $report): void;
 }
