@@ -13,12 +13,14 @@ class StoreRatingRequest extends FormRequest
         return [
             'rated_user_id'          => ['required', 'string', 'uuid', 'exists:users,id'],
             'project_id'             => ['sometimes', 'nullable', 'string', 'uuid', 'exists:projects,id'],
+            'overall_rating'         => ['sometimes', 'integer', 'min:1', 'max:5'],
             'communication_rating'   => ['sometimes', 'nullable', 'integer', 'min:1', 'max:5'],
             'reliability_rating'     => ['sometimes', 'nullable', 'integer', 'min:1', 'max:5'],
             'skill_rating'           => ['sometimes', 'nullable', 'integer', 'min:1', 'max:5'],
             'problem_solving_rating' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:5'],
             'teamwork_rating'        => ['sometimes', 'nullable', 'integer', 'min:1', 'max:5'],
             'written_feedback'       => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'review_text'            => ['sometimes', 'nullable', 'string', 'max:2000'],
             'visibility'             => ['sometimes', 'string', 'in:public,private,anonymous'],
         ];
     }
@@ -27,15 +29,18 @@ class StoreRatingRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             $ratingFields = [
-                'communication_rating', 'reliability_rating', 'skill_rating',
-                'problem_solving_rating', 'teamwork_rating',
+                'overall_rating', 'communication_rating', 'reliability_rating',
+                'skill_rating', 'problem_solving_rating', 'teamwork_rating',
             ];
 
             $provided = collect($ratingFields)
                 ->filter(fn($f) => filled($this->input($f)))
                 ->count();
 
-            if ($provided === 0 && empty($this->input('written_feedback'))) {
+            $hasText = filled($this->input('written_feedback'))
+                || filled($this->input('review_text'));
+
+            if ($provided === 0 && !$hasText) {
                 $validator->errors()->add(
                     'ratings',
                     'At least one rating score or written feedback must be provided.'

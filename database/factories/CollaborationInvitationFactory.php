@@ -13,14 +13,16 @@ class CollaborationInvitationFactory extends Factory
 
     public function definition(): array
     {
-        $status = $this->faker->randomElement(['pending', 'accepted', 'rejected', 'expired']);
+        $status = $this->faker->randomElement(['pending', 'accepted', 'declined', 'expired']);
 
         return [
             'id'               => $this->faker->uuid(),
             'sender_id'        => User::factory(),
             'recipient_id'     => User::factory(),
             'project_id'       => $this->faker->boolean(70) ? Project::factory() : null,
-            'invitation_type'  => $this->faker->randomElement(['project_join', 'team_invite', 'collaboration_request', 'mentorship']),
+            'invitation_type'  => $this->faker->randomElement([
+                'project_join', 'team_invite', 'collaboration_request', 'mentorship', 'co_founder',
+            ]),
             'role'             => $this->faker->randomElement(['Developer', 'Designer', 'CTO', 'CMO', 'Advisor', null]),
             'message'          => $this->faker->paragraph(),
             'status'           => $status,

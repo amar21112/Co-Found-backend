@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\ConflictException;
 use App\Models\CollaborationRating;
 use App\Models\User;
 use App\Traits\SendsNotifications;
@@ -55,7 +56,7 @@ class RatingService
     /**
      * Rate a collaborator.
      *
-     * @throws ValidationException
+     * @throws ValidationException|ConflictException
      */
     public function store(User $rater, array $data): CollaborationRating
     {
@@ -71,13 +72,21 @@ class RatingService
             ->exists();
 
         if ($duplicate) {
-            throw ValidationException::withMessages([
-                'rated_user_id' => ['You have already rated this user for this project.'],
-            ]);
+            throw new ConflictException('You have already rated this user for this project.');
         }
 
-        $data['rater_id']       = $rater->id;
-        $data['overall_rating'] = $this->computeOverall($data);
+        $data['rater_id'] = $rater->id;
+
+        // Normalise review_text alias
+        if (isset($data['review_text']) && !isset($data['written_feedback'])) {
+            $data['written_feedback'] = $data['review_text'];
+        }
+        unset($data['review_text']);
+
+        // Use explicit overall_rating when provided; otherwise compute from sub-ratings
+        if (empty($data['overall_rating'])) {
+            $data['overall_rating'] = $this->computeOverall($data);
+        }
 
         $rating = CollaborationRating::create($data);
 
@@ -96,15 +105,22 @@ class RatingService
 
     /**
      * Update a rating owned by the rater.
-     *
-     * @throws ValidationException
      */
     public function update(User $rater, CollaborationRating $rating, array $data): CollaborationRating
     {
         $this->authorizeOwnership($rater, $rating);
 
-        $merged = array_merge($rating->toArray(), $data);
-        $data['overall_rating'] = $this->computeOverall($merged);
+        // Normalise review_text alias
+        if (isset($data['review_text']) && !isset($data['written_feedback'])) {
+            $data['written_feedback'] = $data['review_text'];
+        }
+        unset($data['review_text']);
+
+        // Honour explicit overall_rating; otherwise recompute from merged sub-ratings
+        if (empty($data['overall_rating'])) {
+            $merged = array_merge($rating->toArray(), $data);
+            $data['overall_rating'] = $this->computeOverall($merged);
+        }
 
         $rating->update($data);
 
