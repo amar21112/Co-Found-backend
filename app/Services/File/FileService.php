@@ -68,6 +68,7 @@ class FileService
     /**
      * Share an already-uploaded file into a conversation.
      * Also sends a file-type message so it appears in the chat thread.
+     * @throws ChatException
      */
     public function shareInConversation(
         User   $sharer,
