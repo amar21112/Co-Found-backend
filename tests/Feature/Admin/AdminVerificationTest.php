@@ -79,7 +79,7 @@ class AdminVerificationTest extends AdminTestCase
         $verification = $this->makePendingVerification();
         Sanctum::actingAs($this->makeModerator());
 
-        $this->getJson("/api/v1/admin/verifications/{$verification->id}")
+        $this->getJson("/api/v1/admin/verifications/$verification->id")
             ->assertStatus(200)
             ->assertJsonPath('data.id', $verification->id)
             ->assertJsonStructure([
@@ -110,7 +110,7 @@ class AdminVerificationTest extends AdminTestCase
         $mod          = $this->makeModerator();
         Sanctum::actingAs($mod);
 
-        $this->patchJson("/api/v1/admin/verifications/{$verification->id}/claim")
+        $this->patchJson("/api/v1/admin/verifications/$verification->id/claim")
             ->assertStatus(200)
             ->assertJsonPath('data.verification_status', IdentityVerificationStatus::UnderReview->value);
 
@@ -134,7 +134,7 @@ class AdminVerificationTest extends AdminTestCase
         ]);
         Sanctum::actingAs($this->makeModerator());
 
-        $this->patchJson("/api/v1/admin/verifications/{$verification->id}/claim")
+        $this->patchJson("/api/v1/admin/verifications/$verification->id/claim")
             ->assertStatus(200)
             ->assertJsonPath('data.verification_status', IdentityVerificationStatus::UnderReview->value);
     }
@@ -147,7 +147,7 @@ class AdminVerificationTest extends AdminTestCase
         ]);
         Sanctum::actingAs($this->makeModerator());
 
-        $this->patchJson("/api/v1/admin/verifications/{$verification->id}/claim")
+        $this->patchJson("/api/v1/admin/verifications/$verification->id/claim")
             ->assertStatus(409);
     }
 
@@ -157,7 +157,7 @@ class AdminVerificationTest extends AdminTestCase
         $verification = $this->makeVerifiedVerification();
         Sanctum::actingAs($this->makeModerator());
 
-        $this->patchJson("/api/v1/admin/verifications/{$verification->id}/claim")
+        $this->patchJson("/api/v1/admin/verifications/$verification->id/claim")
             ->assertStatus(409);
     }
 
@@ -167,7 +167,7 @@ class AdminVerificationTest extends AdminTestCase
         $verification = $this->makePendingVerification();
         Sanctum::actingAs($this->makeRegularUser());
 
-        $this->patchJson("/api/v1/admin/verifications/{$verification->id}/claim")
+        $this->patchJson("/api/v1/admin/verifications/$verification->id/claim")
             ->assertStatus(403);
     }
 
@@ -184,7 +184,7 @@ class AdminVerificationTest extends AdminTestCase
         ]);
         Sanctum::actingAs($mod);
 
-        $this->patchJson("/api/v1/admin/verifications/{$verification->id}/escalate", [
+        $this->patchJson("/api/v1/admin/verifications/$verification->id/escalate", [
             'notes' => 'Document appears altered — needs senior review.',
         ])->assertStatus(200)
             ->assertJsonPath('data.verification_status', IdentityVerificationStatus::Escalated->value);
@@ -204,7 +204,7 @@ class AdminVerificationTest extends AdminTestCase
         ]);
         Sanctum::actingAs($this->makeModerator());
 
-        $this->patchJson("/api/v1/admin/verifications/{$verification->id}/escalate")
+        $this->patchJson("/api/v1/admin/verifications/$verification->id/escalate")
             ->assertStatus(200)
             ->assertJsonPath('data.verification_status', IdentityVerificationStatus::Escalated->value);
     }
@@ -215,7 +215,7 @@ class AdminVerificationTest extends AdminTestCase
         $verification = $this->makePendingVerification();
         Sanctum::actingAs($this->makeModerator());
 
-        $this->patchJson("/api/v1/admin/verifications/{$verification->id}/escalate")
+        $this->patchJson("/api/v1/admin/verifications/$verification->id/escalate")
             ->assertStatus(409);
     }
 
@@ -227,7 +227,7 @@ class AdminVerificationTest extends AdminTestCase
         ]);
         Sanctum::actingAs($this->makeModerator());
 
-        $this->patchJson("/api/v1/admin/verifications/{$verification->id}/escalate")
+        $this->patchJson("/api/v1/admin/verifications/$verification->id/escalate")
             ->assertStatus(409);
     }
 
@@ -239,7 +239,7 @@ class AdminVerificationTest extends AdminTestCase
         ]);
         Sanctum::actingAs($this->makeRegularUser());
 
-        $this->patchJson("/api/v1/admin/verifications/{$verification->id}/escalate")
+        $this->patchJson("/api/v1/admin/verifications/$verification->id/escalate")
             ->assertStatus(403);
     }
 
@@ -255,7 +255,7 @@ class AdminVerificationTest extends AdminTestCase
         $user         = $verification->user;
         Sanctum::actingAs($mod);
 
-        $this->postJson("/api/v1/admin/verifications/{$verification->id}/review", [
+        $this->postJson("/api/v1/admin/verifications/$verification->id/review", [
             'review_action'           => 'approved',
             'review_notes'            => 'Document looks authentic.',
             'automated_checks_passed' => true,
@@ -287,7 +287,7 @@ class AdminVerificationTest extends AdminTestCase
         $user         = $verification->user;
         Sanctum::actingAs($mod);
 
-        $this->postJson("/api/v1/admin/verifications/{$verification->id}/review", [
+        $this->postJson("/api/v1/admin/verifications/$verification->id/review", [
             'review_action'             => 'rejected',
             'review_notes'              => 'Image is too blurry to read.',
             'rejection_reason_category' => 'unclear',
@@ -305,7 +305,7 @@ class AdminVerificationTest extends AdminTestCase
         $verification = $this->makePendingVerification();
         Sanctum::actingAs($this->makeModerator());
 
-        $this->postJson("/api/v1/admin/verifications/{$verification->id}/review", [
+        $this->postJson("/api/v1/admin/verifications/$verification->id/review", [
             'review_action' => 'request_resubmission',
             'review_notes'  => 'Please upload a clearer photo.',
         ])->assertStatus(200)
@@ -318,7 +318,7 @@ class AdminVerificationTest extends AdminTestCase
         $verification = $this->makeVerifiedVerification();
         Sanctum::actingAs($this->makeModerator());
 
-        $this->postJson("/api/v1/admin/verifications/{$verification->id}/review", [
+        $this->postJson("/api/v1/admin/verifications/$verification->id/review", [
             'review_action' => 'approved',
         ])->assertStatus(409);
     }
@@ -329,7 +329,7 @@ class AdminVerificationTest extends AdminTestCase
         $verification = $this->makeRejectedVerification();
         Sanctum::actingAs($this->makeModerator());
 
-        $this->postJson("/api/v1/admin/verifications/{$verification->id}/review", [
+        $this->postJson("/api/v1/admin/verifications/$verification->id/review", [
             'review_action'             => 'rejected',
             'rejection_reason_category' => 'other',
         ])->assertStatus(409);
@@ -341,7 +341,7 @@ class AdminVerificationTest extends AdminTestCase
         $verification = $this->makePendingVerification();
         Sanctum::actingAs($this->makeModerator());
 
-        $this->postJson("/api/v1/admin/verifications/{$verification->id}/review", [
+        $this->postJson("/api/v1/admin/verifications/$verification->id/review", [
             'review_action' => 'rejected',
         ])->assertStatus(422)
             ->assertJsonValidationErrors(['rejection_reason_category']);
@@ -353,7 +353,7 @@ class AdminVerificationTest extends AdminTestCase
         $verification = $this->makePendingVerification();
         Sanctum::actingAs($this->makeModerator());
 
-        $this->postJson("/api/v1/admin/verifications/{$verification->id}/review", [
+        $this->postJson("/api/v1/admin/verifications/$verification->id/review", [
             'review_action' => 'made_up_action',
         ])->assertStatus(422)
             ->assertJsonValidationErrors(['review_action']);
@@ -365,7 +365,7 @@ class AdminVerificationTest extends AdminTestCase
         $verification = $this->makePendingVerification();
         Sanctum::actingAs($this->makeRegularUser());
 
-        $this->postJson("/api/v1/admin/verifications/{$verification->id}/review", [
+        $this->postJson("/api/v1/admin/verifications/$verification->id/review", [
             'review_action' => 'approved',
         ])->assertStatus(403);
     }
