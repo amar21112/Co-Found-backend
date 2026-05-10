@@ -201,7 +201,7 @@ class Handler extends ExceptionHandler
         );
 
         $this->renderable(fn(CannotDeleteSelfException $e) =>
-            $this->error($e->getMessage(), Response::HTTP_UNPROCESSABLE_ENTITY)
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
         );
 
         // ── Admin — setting exceptions ────────────────────────────────────────

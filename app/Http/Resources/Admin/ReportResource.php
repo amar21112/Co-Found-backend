@@ -46,7 +46,7 @@ class ReportResource extends JsonResource
                     'username'            => $this->reporter->username,
                     'full_name'           => $this->reporter->full_name,
                     'profile_picture_url' => $this->reporter->profile_picture_url,
-                    'account_status'      => $this->reporter->account_status->value,
+                    'account_status'      => $this->reporter->account_status?->value,
                     'identity_verified'   => $this->reporter->identity_verified,
                 ] : null
             ),
