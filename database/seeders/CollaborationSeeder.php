@@ -3,10 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use App\Models\UserConnection;
-use App\Models\CollaborationInvitation;
-use App\Models\CollaborationRating;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CollaborationSeeder extends Seeder
@@ -16,7 +14,7 @@ class CollaborationSeeder extends Seeder
         $users = User::where('role', 'regular_user')->inRandomOrder()->get();
 
         // Use DB::table to avoid any SoftDeletes / global scope on the Project model
-        $projects = \DB::table('projects')->inRandomOrder()->take(20)->get();
+        $projects = DB::table('projects')->inRandomOrder()->take(20)->get();
 
         $this->seedConnections($users);
         $this->seedMatches($users, $projects);
@@ -37,12 +35,12 @@ class CollaborationSeeder extends Seeder
             if ($pairs->contains($key)) continue;
             $pairs->push($key);
 
-            \DB::table('user_connections')->insertOrIgnore([
+            DB::table('user_connections')->insertOrIgnore([
                 'id'              => Str::uuid(),
                 'requester_id'    => $a->id,
                 'recipient_id'    => $b->id,
                 'status'          => fake()->randomElement(['pending', 'accepted', 'accepted', 'accepted']),
-                'connection_type' => fake()->randomElement(['co_founder', 'collaborator', 'mentor', null]),
+                'connection_type' => fake()->randomElement(['collaborator', 'mentor', null]),
                 'created_at'      => now()->subDays(rand(1, 60)),
                 'updated_at'      => now(),
             ]);
@@ -56,7 +54,7 @@ class CollaborationSeeder extends Seeder
             $user    = $users->random();
             $matched = $users->where('id', '!=', $user->id)->random();
 
-            \DB::table('matches')->insertOrIgnore([
+            DB::table('matches')->insertOrIgnore([
                 'id'                  => Str::uuid(),
                 'user_id'             => $user->id,
                 'matched_user_id'     => $matched->id,
@@ -80,7 +78,7 @@ class CollaborationSeeder extends Seeder
         // User-to-project matches
         foreach ($users->take(30) as $user) {
             $project = $projects->random();
-            \DB::table('matches')->insertOrIgnore([
+            DB::table('matches')->insertOrIgnore([
                 'id'                  => Str::uuid(),
                 'user_id'             => $user->id,
                 'matched_user_id'     => null,
@@ -108,7 +106,7 @@ class CollaborationSeeder extends Seeder
             $recipient = $users->where('id', '!=', $sender->id)->random();
             $status    = fake()->randomElement(['pending', 'accepted', 'declined', 'expired', 'withdrawn']);
 
-            \DB::table('collaboration_invitations')->insert([
+            DB::table('collaboration_invitations')->insert([
                 'id'               => Str::uuid(),
                 'sender_id'        => $sender->id,
                 'recipient_id'     => $recipient->id,
@@ -139,7 +137,7 @@ class CollaborationSeeder extends Seeder
 
             $ratings = [rand(1, 5), rand(1, 5), rand(1, 5), rand(1, 5), rand(1, 5)];
 
-            \DB::table('collaboration_ratings')->insert([
+            DB::table('collaboration_ratings')->insert([
                 'id'                     => Str::uuid(),
                 'rater_id'               => $rater->id,
                 'rated_user_id'          => $rated->id,

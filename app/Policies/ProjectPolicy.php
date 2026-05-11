@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\RestrictionType;
 use App\Models\Project;
 use App\Models\User;
 
@@ -77,15 +78,30 @@ class ProjectPolicy
     }
 
     /**
-     * User can apply if not already a member and project is accepting.
+     * User can apply if:
+     *  - not the owner
+     *  - not already a team member
+     *  - not under an application_ban restriction
+     * NOTE: is_accepting_applications is a business-rule 422, handled in the service.
      */
     public function apply(User $user, Project $project): bool
     {
         if ($project->owner_id === $user->id) {
-            return false; // Owner can't apply to own project
+            return false;
         }
 
-        return $project->is_accepting_applications;
+        if ($project->teamMembers()->where('user_id', $user->id)->exists()) {
+            return false;
+        }
+
+        if ($user->activeRestrictions()
+            ->where('restriction_type', RestrictionType::ApplicationBan->value)
+            ->exists()
+        ) {
+            return false;
+        }
+
+        return true;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

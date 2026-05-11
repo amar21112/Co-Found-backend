@@ -14,6 +14,8 @@ class ConfigurationHistory extends Model
     public $incrementing  = false;
     protected $keyType    = 'string';
 
+    protected $table = 'configuration_history';
+    
     protected $fillable = [
         'setting_key', 'old_value', 'new_value',
         'changed_by', 'change_reason',

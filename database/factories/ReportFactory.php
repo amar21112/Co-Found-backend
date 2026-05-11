@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Models\Report;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\DB;
 
 class ReportFactory extends Factory
 {
@@ -41,5 +42,34 @@ class ReportFactory extends Factory
             'resolved_by' => null,
             'resolved_at' => null,
         ]);
+    }
+
+    /**
+     * Both reporter and reported_user are drawn from the pool of users
+     * that already have a fully verified identity_verification record.
+     *
+     * Requires IdentityVerificationSeeder to have run first.
+     */
+    public function withVerifiedUsers(): static
+    {
+        return $this->state(function () {
+            // Fetch users that have a verified identity verification record.
+            $verifiedUserIds = DB::table('identity_verifications')
+                ->where('verification_status', 'verified')
+                ->pluck('user_id')
+                ->shuffle();
+
+            if ($verifiedUserIds->count() < 2) {
+                throw new \RuntimeException(
+                    'withVerifiedUsers() requires at least 2 verified users. ' .
+                    'Make sure IdentityVerificationSeeder ran before AdministrationSeeder.'
+                );
+            }
+
+            return [
+                'reporter_id'      => $verifiedUserIds->get(0),
+                'reported_user_id' => $verifiedUserIds->get(1),
+            ];
+        });
     }
 }

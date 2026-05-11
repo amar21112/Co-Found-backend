@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\MatchType;
+use Database\Factories\MatchFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -24,6 +26,7 @@ class MatchModel extends Model
     ];
 
     protected $casts = [
+        'match_type'          => MatchType::class,
         'compatibility_score' => 'float',
         'match_reasons'       => 'array',
         'viewed'              => 'boolean',
@@ -32,6 +35,14 @@ class MatchModel extends Model
         'viewed_at'           => 'datetime',
         'expires_at'          => 'datetime',
     ];
+
+    /**
+     * Get the factory instance for the model.
+     */
+    protected static function newFactory(): MatchFactory
+    {
+        return MatchFactory::new();
+    }
 
     public function user(): BelongsTo
     {
@@ -52,10 +63,21 @@ class MatchModel extends Model
 
     public function feedback(): HasMany
     {
-        return $this->hasMany(MatchFeedback::class);
+        return $this->hasMany(MatchFeedback::class, 'match_id');
     }
 
-    public function isExpired(): bool      { return $this->expires_at?->isPast(); }
-    public function isUserMatch(): bool    { return $this->match_type === 'collaborator'; }
-    public function isProjectMatch(): bool { return $this->match_type === 'project'; }
+    public function isExpired(): bool
+    {
+        return $this->expires_at?->isPast() ?? false;
+    }
+
+    public function isUserMatch(): bool
+    {
+        return $this->match_type === MatchType::Collaborator;
+    }
+
+    public function isProjectMatch(): bool
+    {
+        return $this->match_type === MatchType::Project;
+    }
 }

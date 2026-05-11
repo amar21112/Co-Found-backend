@@ -2,120 +2,169 @@
 
 namespace App\Services;
 
+use App\DTOs\Match\ExportDatasetDTO;
+use App\DTOs\Match\GenerateDatasetDTO;
+use App\DTOs\Match\IngestMatchDTO;
+use App\DTOs\Match\SubmitFeedbackDTO;
+use App\Exceptions\Match\FeedbackAlreadySubmittedException;
+use App\Exceptions\Match\MatchNotFoundException;
+use App\Generators\MatchDatasetGenerator;
 use App\Models\MatchFeedback;
 use App\Models\MatchModel;
 use App\Models\User;
+use App\Repositories\Contracts\MatchRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Collection;
 
-class MatchService
+readonly class MatchService
 {
+    public function __construct(
+        private MatchRepositoryInterface $matchRepo,
+        private MatchDatasetGenerator    $generator,
+    ) {}
+
+    // =========================================================================
+    // List
+    // =========================================================================
+
     /**
-     * List all matches for the user.
+     * List matches for the user.
      *
-     * Filters  : match_type (collaborator | project),
-     *            viewed (true | false),
-     *            saved (true | false),
-     *            min_score (e.g. 0.7 — minimum compatibility_score)
-     * Sort     : sort_by (compatibility_score | created_at | expires_at),
-     *            sort_dir (asc | desc)
-     * Paginate : per_page (default 15, max 50)
+     * Filters: match_type, viewed, saved, min_score
+     * Sorting: sort_by (compatibility_score|created_at|expires_at), sort_dir
+     * Pagination: per_page (default 15, max 50)
      */
     public function list(User $user, array $filters = []): LengthAwarePaginator
     {
-        $query = MatchModel::where('user_id', $user->id)
-            ->with(['matchedUser', 'matchedProject']);
-
-        // Filter by match type
-        if (! empty($filters['match_type'])) {
-            $query->where('match_type', $filters['match_type']);
-        }
-
-        // Filter by viewed status
-        if (isset($filters['viewed']) && $filters['viewed'] !== '') {
-            $query->where('viewed', filter_var($filters['viewed'], FILTER_VALIDATE_BOOLEAN));
-        }
-
-        // Filter by saved status
-        if (isset($filters['saved']) && $filters['saved'] !== '') {
-            $query->where('saved', filter_var($filters['saved'], FILTER_VALIDATE_BOOLEAN));
-        }
-
-        // Filter by minimum compatibility score
-        if (isset($filters['min_score']) && $filters['min_score'] !== '') {
-            $query->where('compatibility_score', '>=', (float) $filters['min_score']);
-        }
-
-        // Sorting
-        $allowed = ['compatibility_score', 'created_at', 'expires_at'];
-        $sortBy  = in_array($filters['sort_by'] ?? '', $allowed) ? $filters['sort_by'] : 'created_at';
-        $sortDir = ($filters['sort_dir'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
-        $query->orderBy($sortBy, $sortDir);
-
         $perPage = min((int) ($filters['per_page'] ?? 15), 50);
 
-        return $query->paginate($perPage);
+        return $this->matchRepo->paginate($user, $filters, $perPage);
     }
 
+    // =========================================================================
+    // Show
+    // =========================================================================
+
+    public function show(string $id, User $user): MatchModel
+    {
+        $match = $this->matchRepo->findById($id);
+
+        if (! $match || $match->user_id !== $user->id) {
+            throw new MatchNotFoundException();
+        }
+
+        return $match;
+    }
+
+    // =========================================================================
+    // Mark Viewed
+    // =========================================================================
+
     /**
-     * Mark a match as viewed (idempotent).
+     * Mark a match as viewed — idempotent.
      */
     public function markViewed(User $user, MatchModel $match): MatchModel
     {
         $this->authorizeOwnership($user, $match);
 
-        if (! $match->viewed) {
-            $match->update([
-                'viewed'    => true,
-                'viewed_at' => now(),
-            ]);
-        }
-
-        return $match->load(['matchedUser', 'matchedProject']);
+        return $this->matchRepo->markViewed($match);
     }
 
-    /**
-     * Toggle the saved state of a match.
-     */
+    // =========================================================================
+    // Toggle Save
+    // =========================================================================
+
     public function toggleSave(User $user, MatchModel $match): MatchModel
     {
         $this->authorizeOwnership($user, $match);
 
-        $match->update(['saved' => ! $match->saved]);
-
-        return $match->load(['matchedUser', 'matchedProject']);
+        return $this->matchRepo->toggleSave($match);
     }
+
+    // =========================================================================
+    // Submit Feedback
+    // =========================================================================
 
     /**
      * Submit feedback for a match.
-     * A user can only submit one feedback entry per match.
      *
-     * @throws ValidationException
+     * Business rules:
+     * - One feedback per user per match (unique constraint in DB).
+     * - Submitting feedback marks the match as action_taken.
+     * - Returns 409 if feedback already exists.
      */
-    public function submitFeedback(User $user, MatchModel $match, array $data): MatchFeedback
-    {
+    public function submitFeedback(
+        User             $user,
+        MatchModel       $match,
+        SubmitFeedbackDTO $dto
+    ): MatchFeedback {
         $this->authorizeOwnership($user, $match);
 
-        $exists = MatchFeedback::where('match_id', $match->id)
-            ->where('user_id', $user->id)
-            ->exists();
-
-        if ($exists) {
-            throw ValidationException::withMessages([
-                'match' => ['You have already submitted feedback for this match.'],
-            ]);
+        if ($this->matchRepo->hasFeedback($match, $user->id)) {
+            throw new FeedbackAlreadySubmittedException();
         }
 
-        $feedback = MatchFeedback::create([
-            'match_id'      => $match->id,
-            'user_id'       => $user->id,
-            'feedback_type' => $data['feedback_type'],
-        ]);
+        $feedback = $this->matchRepo->createFeedback($match, $user, $dto);
 
-        $match->update(['action_taken' => true]);
+        $this->matchRepo->markActionTaken($match);
 
         return $feedback;
     }
+
+    // =========================================================================
+    // ML methods
+    // =========================================================================
+
+    /**
+     * Generate a synthetic training dataset.
+     * Delegates to MatchDatasetGenerator — no dependency on the seeder.
+     *
+     * @return array{users: int, projects: int, collaborator_matches: int, project_matches: int}
+     */
+    public function generateDataset(GenerateDatasetDTO $dto): array
+    {
+        return $this->generator->generate(
+            users:             $dto->users,
+            projects:          $dto->projects,
+            collaboratorPairs: $dto->collaboratorPairs,
+            projectPairs:      $dto->projectPairs,
+            fresh:             $dto->fresh,
+        );
+    }
+
+    /**
+     * Export flattened training data.
+     * Single source of truth in the repository.
+     *
+     * @return Collection<int, array>
+     */
+    public function exportTrainingData(ExportDatasetDTO $dto): Collection
+    {
+        return $this->matchRepo->exportTrainingData($dto);
+    }
+
+    /**
+     * Dataset statistics for the ML team's health check.
+     */
+    public function datasetStats(): array
+    {
+        return $this->matchRepo->datasetStats();
+    }
+
+    /**
+     * Upsert ML-scored match records into the matches table.
+     *
+     * @param  IngestMatchDTO[]  $dtos
+     * @return array{created: int, updated: int}
+     */
+    public function ingestBatch(array $dtos): array
+    {
+        return $this->matchRepo->ingestBatch($dtos);
+    }
+
+    // =========================================================================
+    // Private helpers
+    // =========================================================================
 
     private function authorizeOwnership(User $user, MatchModel $match): void
     {

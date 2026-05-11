@@ -3,6 +3,7 @@
 namespace App\Services\Chat;
 
 use App\Enums\MessageType;
+use App\Enums\RestrictionType;
 use App\Exceptions\CannotEditMessageException;
 use App\Exceptions\ChatException;
 use App\Exceptions\MessageNotFoundException;
@@ -32,6 +33,7 @@ class MessageService
     public function send(User $sender, Conversation $conversation, array $data): Message
     {
         $this->assertParticipant($sender, $conversation);
+        $this->assertNotMessagingBanned($sender);
 
         $message = $this->messageRepo->create([
             'conversation_id'       => $conversation->id,
@@ -77,10 +79,6 @@ class MessageService
 
     public function delete(User $deleter, Message $message): void
     {
-        if ($message->sender_id !== $deleter->id) {
-            throw new ChatException('You can only delete your own messages.', 403);
-        }
-
         $this->messageRepo->softDelete($message);
 
         // Mark as deleted in Firebase (content cleared, node preserved for threads)
@@ -145,6 +143,16 @@ class MessageService
     {
         if (!$this->conversationRepo->isParticipant($conversation->id, $user->id)) {
             throw new NotAParticipantException();
+        }
+    }
+
+    private function assertNotMessagingBanned(User $user): void
+    {
+        if ($user->activeRestrictions()
+            ->where('restriction_type', RestrictionType::MessagingBan->value)
+            ->exists()
+        ) {
+            throw new ChatException('You are banned from sending messages.', 403);
         }
     }
 

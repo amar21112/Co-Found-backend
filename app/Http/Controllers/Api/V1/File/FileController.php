@@ -1,13 +1,17 @@
 <?php
 
-namespace App\Http\Controllers\Api\V1\Chat;
+namespace App\Http\Controllers\Api\V1\File;
 
+use App\Exceptions\ChatException;
+use App\Exceptions\FileUploadException;
+use App\Exceptions\NotAParticipantException;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Chat\ShareFileRequest;
-use App\Http\Resources\Chat\FileResource;
-use App\Http\Resources\Chat\SharedFileResource;
+use App\Http\Requests\File\ShareFileRequest;
+use App\Http\Resources\File\FileResource;
+use App\Http\Resources\File\SharedFileResource;
 use App\Models\File;
-use App\Services\Chat\FileService;
+use App\Services\File\FileService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -20,13 +24,14 @@ class FileController extends Controller
 
     /**
      * POST /api/v1/files
-     * Upload a file to S3. Returns the file metadata.
+     * Upload a file to local storage. Returns the file metadata.
      * The file is NOT shared anywhere until a shareInConversation call.
+     * @throws FileUploadException
      */
     public function upload(Request $request): JsonResponse
     {
         $request->validate([
-            'file' => 'required|file|max:51200', // 50 MB
+            'file' => ['required', 'file', 'max:51200'], // 50 MB
         ]);
 
         $file = $this->service->upload(
@@ -54,6 +59,7 @@ class FileController extends Controller
     /**
      * DELETE /api/v1/files/{file}
      * Delete own file from storage and MySQL.
+     * @throws AuthorizationException|ChatException
      */
     public function destroy(Request $request, File $file): JsonResponse
     {
@@ -67,6 +73,7 @@ class FileController extends Controller
     /**
      * GET /api/v1/conversations/{conversationId}/files
      * List files shared in a conversation.
+     * @throws NotAParticipantException
      */
     public function indexShared(Request $request, string $conversationId): AnonymousResourceCollection
     {
@@ -82,6 +89,7 @@ class FileController extends Controller
     /**
      * POST /api/v1/conversations/{conversationId}/files
      * Share an uploaded file into a conversation.
+     * @throws ChatException
      */
     public function share(ShareFileRequest $request, string $conversationId): JsonResponse
     {

@@ -2,8 +2,12 @@
 
 namespace App\Exceptions;
 
+use App\Exceptions\Admin\AdminUserNotFoundException;
+use App\Exceptions\Admin\CannotDeleteSelfException;
+use App\Exceptions\Admin\ReportNotFoundException;
 use App\Exceptions\Admin\RestrictionAlreadyLiftedException;
 use App\Exceptions\Admin\RestrictionNotFoundException;
+use App\Exceptions\Admin\SettingNotFoundException;
 use App\Exceptions\Admin\VerificationAlreadyReviewedException;
 use App\Exceptions\Admin\VerificationNotClaimableException;
 use App\Exceptions\Admin\VerificationNotEscalatableException;
@@ -20,26 +24,38 @@ use App\Exceptions\Call\CallNotFoundException;
 use App\Exceptions\Call\CallNotJoinableException;
 use App\Exceptions\Call\NotACallParticipantException;
 use App\Exceptions\Call\NotCallHostException;
+use App\Exceptions\Match\FeedbackAlreadySubmittedException;
+use App\Exceptions\Match\MatchNotFoundException;
+use App\Exceptions\Skill\DuplicateEndorsementException;
+use App\Exceptions\Skill\DuplicateSkillException;
+use App\Exceptions\Skill\EndorsementNotFoundException;
+use App\Exceptions\Verification\DuplicateIdentityCardException;
+use App\Exceptions\Verification\NoVerificationSubmittedException;
+use App\Exceptions\Verification\VerificationAlreadyExistsException;
+use App\Exceptions\Verification\VerificationAttemptLimitException;
 use DateTimeInterface;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 class Handler extends ExceptionHandler
 {
     /**
-     * A list of exception types with their corresponding custom log levels.
+     * Exception types with custom log levels.
      *
      * @var array<class-string<\Throwable>, \Psr\Log\LogLevel::*>
      */
     protected $levels = [];
 
     /**
-     * A list of the exception types that are not reported.
+     * Exception types that should NOT be reported to the log.
+     * These are all domain exceptions that result in clean HTTP responses.
      *
      * @var array<int, class-string<\Throwable>>
      */
     protected $dontReport = [
+        // Auth
         InvalidCredentialsException::class,
         AccountLockedException::class,
         AccountNotActiveException::class,
@@ -47,23 +63,55 @@ class Handler extends ExceptionHandler
         EmailAlreadyVerifiedException::class,
         InvalidVerificationTokenException::class,
         InvalidPasswordResetTokenException::class,
-        // Admin exceptions
+
+        // Admin — verification
         VerificationNotFoundException::class,
         VerificationAlreadyReviewedException::class,
         VerificationNotClaimableException::class,
         VerificationNotEscalatableException::class,
+
+        // Admin — restrictions
         RestrictionNotFoundException::class,
         RestrictionAlreadyLiftedException::class,
+
+        // Admin — reports
+        ReportNotFoundException::class,
+
+        // Admin — users
+        AdminUserNotFoundException::class,
+        CannotDeleteSelfException::class,
+
+        // Admin — settings
+        SettingNotFoundException::class,
+
         // Call exceptions
         CallNotFoundException::class,
         CallAlreadyEndedException::class,
         CallNotJoinableException::class,
         NotACallParticipantException::class,
         NotCallHostException::class,
+
+        // Match exceptions
+        MatchNotFoundException::class,
+        FeedbackAlreadySubmittedException::class,
+
+        // Verification exceptions
+        NoVerificationSubmittedException::class,
+        VerificationAlreadyExistsException::class,
+        VerificationAttemptLimitException::class,
+        DuplicateIdentityCardException::class,
+
+        //Skill exceptions
+        DuplicateEndorsementException::class,
+        DuplicateSkillException::class,
+        EndorsementNotFoundException::class,
+
+        //General exceptions
+        ConflictException::class,
     ];
 
     /**
-     * A list of the inputs that are never flashed to the session on validation exceptions.
+     * Inputs that should never be flashed to the session on validation errors.
      *
      * @var array<int, string>
      */
@@ -74,88 +122,158 @@ class Handler extends ExceptionHandler
     ];
 
     /**
-     * Register the exception handling callbacks for the application.
+     * Register exception handling callbacks.
      */
     public function register(): void
     {
-        // ── 401 Auth Exceptions ───────────────────────────────────────────────
+        // ── Auth exceptions ───────────────────────────────────────────────────
+
         $this->renderable(fn(InvalidCredentialsException $e) =>
-            $this->authError($e->getMessage(), 401)
+            $this->error($e->getMessage(), Response::HTTP_UNAUTHORIZED)
         );
 
         $this->renderable(fn(AccountNotActiveException $e) =>
-            $this->authError($e->getMessage(), 403)
+            $this->error($e->getMessage(), Response::HTTP_FORBIDDEN)
         );
 
         $this->renderable(fn(AccountRestrictedException $e) =>
-            $this->authError($e->getMessage(), 403)
+            $this->error($e->getMessage(), Response::HTTP_FORBIDDEN)
         );
 
         $this->renderable(fn(AccountLockedException $e) =>
             response()->json([
-                'status'  => 'error',
-                'message' => $e->getMessage(),
+                'status'       => 'error',
+                'message'      => $e->getMessage(),
                 'locked_until' => $e->lockedUntil->format(DateTimeInterface::ATOM),
-            ], 423)
+            ], Response::HTTP_LOCKED)
         );
 
-        // ── 400 Token Exceptions ──────────────────────────────────────────────
         $this->renderable(fn(InvalidVerificationTokenException $e) =>
-            $this->authError($e->getMessage(), 400)
+            $this->error($e->getMessage(), Response::HTTP_BAD_REQUEST)
         );
 
         $this->renderable(fn(InvalidPasswordResetTokenException $e) =>
-            $this->authError($e->getMessage(), 400)
+            $this->error($e->getMessage(), Response::HTTP_BAD_REQUEST)
         );
 
         $this->renderable(fn(EmailAlreadyVerifiedException $e) =>
-            $this->authError($e->getMessage(), 409)
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
         );
 
-        // ── Admin Exceptions ──────────────────────────────────────────────────
+        // ── Admin — verification exceptions ───────────────────────────────────
+
         $this->renderable(fn(VerificationNotFoundException $e) =>
-            $this->authError($e->getMessage(), 404)
+            $this->error($e->getMessage(), Response::HTTP_NOT_FOUND)
         );
 
         $this->renderable(fn(VerificationAlreadyReviewedException $e) =>
-            $this->authError($e->getMessage(), 409)
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
         );
 
         $this->renderable(fn(VerificationNotClaimableException $e) =>
-            $this->authError($e->getMessage(), 409)
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
         );
 
         $this->renderable(fn(VerificationNotEscalatableException $e) =>
-            $this->authError($e->getMessage(), 409)
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
         );
 
+        // ── Admin — restriction exceptions ────────────────────────────────────
+
         $this->renderable(fn(RestrictionNotFoundException $e) =>
-            $this->authError($e->getMessage(), 404)
+            $this->error($e->getMessage(), Response::HTTP_NOT_FOUND)
         );
 
         $this->renderable(fn(RestrictionAlreadyLiftedException $e) =>
-            $this->authError($e->getMessage(), 409)
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
+        );
+
+        // ── Admin — report exceptions ─────────────────────────────────────────
+
+        $this->renderable(fn(ReportNotFoundException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_NOT_FOUND)
+        );
+
+        // ── Admin — user exceptions ───────────────────────────────────────────
+
+        $this->renderable(fn(AdminUserNotFoundException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_NOT_FOUND)
+        );
+
+        $this->renderable(fn(CannotDeleteSelfException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
+        );
+
+        // ── Admin — setting exceptions ────────────────────────────────────────
+
+        $this->renderable(fn(SettingNotFoundException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_NOT_FOUND)
         );
 
         // ── Call Exceptions ───────────────────────────────────────────────────
+
         $this->renderable(fn(CallNotFoundException $e) =>
-            $this->authError($e->getMessage(), 404)
+            $this->error($e->getMessage(), Response::HTTP_NOT_FOUND)
         );
 
         $this->renderable(fn(CallAlreadyEndedException $e) =>
-            $this->authError($e->getMessage(), 409)
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
         );
 
         $this->renderable(fn(CallNotJoinableException $e) =>
-            $this->authError($e->getMessage(), 409)
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
         );
 
         $this->renderable(fn(NotACallParticipantException $e) =>
-            $this->authError($e->getMessage(), 403)
+            $this->error($e->getMessage(), Response::HTTP_FORBIDDEN)
         );
 
         $this->renderable(fn(NotCallHostException $e) =>
-            $this->authError($e->getMessage(), 403)
+            $this->error($e->getMessage(), Response::HTTP_FORBIDDEN)
+        );
+
+        // ── Match Exceptions ──────────────────────────────────────────────────
+        $this->renderable(fn(MatchNotFoundException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_NOT_FOUND)
+        );
+
+        $this->renderable(fn(FeedbackAlreadySubmittedException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
+        );
+
+        // ── Verification Exceptions ───────────────────────────────────────────
+        $this->renderable(fn(NoVerificationSubmittedException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_NOT_FOUND)
+        );
+
+        $this->renderable(fn(VerificationAlreadyExistsException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
+        );
+
+        $this->renderable(fn(VerificationAttemptLimitException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_TOO_MANY_REQUESTS)
+        );
+
+        $this->renderable(fn(DuplicateIdentityCardException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
+        );
+
+        // ── Skill Exceptions ───────────────────────────────────────────
+        $this->renderable(fn(DuplicateEndorsementException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
+        );
+
+        $this->renderable(fn(DuplicateSkillException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
+        );
+
+        $this->renderable(fn(EndorsementNotFoundException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_NOT_FOUND)
+        );
+
+        // ── General Exceptions ───────────────────────────────────────────
+        $this->renderable(fn(ConflictException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
         );
 
         $this->reportable(function (Throwable $e) {
@@ -163,7 +281,9 @@ class Handler extends ExceptionHandler
         });
     }
 
-    private function authError(string $message, int $status): JsonResponse
+    // ── Private helper ────────────────────────────────────────────────────────
+
+    private function error(string $message, int $status): JsonResponse
     {
         return response()->json(['status' => 'error', 'message' => $message], $status);
     }

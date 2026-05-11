@@ -2,11 +2,23 @@
 
 namespace App\Http\Requests\Project;
 
+use App\Enums\RestrictionType;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CreateProjectRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        $user = $this->user();
+
+        if (!$user || $user->isGuest() || !$user->email_verified) {
+            return false;
+        }
+
+        return !$user->activeRestrictions()
+            ->where('restriction_type', RestrictionType::PostingBan->value)
+            ->exists();
+    }
 
     public function rules(): array
     {

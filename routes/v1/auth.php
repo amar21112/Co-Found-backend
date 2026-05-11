@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Authentication Routes  —  prefix: /api/auth
+| Authentication Routes  —  prefix: /api/v1/auth
 |--------------------------------------------------------------------------
 |
 | Middleware tiers:

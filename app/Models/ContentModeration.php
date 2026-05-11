@@ -3,17 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ContentModeration extends Model
 {
-    use HasUuids;
+    use HasUuids, HasFactory;
 
     public $timestamps = false;
     protected $primaryKey = 'id';
     public $incrementing = false;
     protected $keyType = 'string';
+
+    protected $table = 'content_moderation';
 
     protected $fillable = [
         'moderator_id', 'content_type', 'content_id',

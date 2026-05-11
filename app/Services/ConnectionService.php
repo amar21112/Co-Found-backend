@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\ConflictException;
 use App\Models\User;
 use App\Models\UserConnection;
 use App\Traits\SendsNotifications;
@@ -11,6 +12,7 @@ use Illuminate\Validation\ValidationException;
 class ConnectionService
 {
     use SendsNotifications;
+
     /**
      * List connections for a user.
      *
@@ -70,7 +72,7 @@ class ConnectionService
     /**
      * Send a connection request to another user.
      *
-     * @throws ValidationException
+     * @throws ValidationException|ConflictException
      */
     public function send(User $requester, array $data): UserConnection
     {
@@ -98,7 +100,8 @@ class ConnectionService
                 'rejected' => 'This connection request was rejected.',
                 default    => 'A connection already exists.',
             };
-            throw ValidationException::withMessages(['recipient_id' => [$message]]);
+
+            throw new ConflictException($message);
         }
 
         $connection = UserConnection::create([
@@ -125,7 +128,7 @@ class ConnectionService
      * Accept a pending connection request.
      * Only the recipient can accept.
      *
-     * @throws ValidationException
+     * @throws ConflictException
      */
     public function accept(User $user, UserConnection $connection): UserConnection
     {
@@ -134,9 +137,7 @@ class ConnectionService
         }
 
         if ($connection->status !== 'pending') {
-            throw ValidationException::withMessages([
-                'connection' => ['This connection request is no longer pending.'],
-            ]);
+            throw new ConflictException('This connection request is no longer pending.');
         }
 
         $connection->update(['status' => 'accepted']);
@@ -161,7 +162,7 @@ class ConnectionService
      * Only the recipient can reject.
      * After rejection the record is deleted — the requester just sees it as gone.
      *
-     * @throws ValidationException
+     * @throws ConflictException
      */
     public function reject(User $user, UserConnection $connection): void
     {
@@ -170,9 +171,7 @@ class ConnectionService
         }
 
         if ($connection->status !== 'pending') {
-            throw ValidationException::withMessages([
-                'connection' => ['Only pending connection requests can be rejected.'],
-            ]);
+            throw new ConflictException('Only pending connection requests can be rejected.');
         }
 
         // Delete immediately — rejected requests are not kept in the DB.
@@ -188,7 +187,7 @@ class ConnectionService
      * so that future connection requests from that user are prevented.
      * The blocked user is NOT notified.
      *
-     * @throws ValidationException
+     * @throws ConflictException
      */
     public function block(User $user, UserConnection $connection): UserConnection
     {
@@ -200,9 +199,7 @@ class ConnectionService
         }
 
         if ($connection->status === 'blocked') {
-            throw ValidationException::withMessages([
-                'connection' => ['This connection is already blocked.'],
-            ]);
+            throw new ConflictException('This connection is already blocked.');
         }
 
         // Whoever calls block becomes the requester in the blocked record,
