@@ -68,8 +68,6 @@ class ProjectTeamController extends Controller
      */
     public function leave(Request $request, Project $project): JsonResponse
     {
-        $this->authorize('view', $project);
-
         $this->service->leave($project, $request->user());
 
         return response()->json(['message' => 'You have left the project.'], 200);

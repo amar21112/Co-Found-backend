@@ -9,13 +9,11 @@ class CreateProjectRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $user = $this->user();
-
-        if (!$user || $user->isGuest() || !$user->email_verified) {
-            return false;
-        }
-
-        return !$user->activeRestrictions()
+        // auth:sanctum, no.guest, and verified middleware already enforce
+        // authentication, guest exclusion, and email verification before
+        // this request is resolved. Only the posting_ban restriction is
+        // a request-level concern.
+        return !$this->user()->activeRestrictions()
             ->where('restriction_type', RestrictionType::PostingBan->value)
             ->exists();
     }
