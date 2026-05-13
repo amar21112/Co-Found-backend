@@ -20,18 +20,20 @@ class VideoCallFactory extends Factory
         $duration  = $status === CallStatus::Ended->value
             ? $this->faker->numberBetween(60, 7200)
             : null;
-        $roomName  = Str::random();
 
+        $roomName = 'cofound-' . Str::random();
+        $baseUrl  = rtrim(config('jitsi.base_url', 'https://meet.jit.si'), '/');
+
+        // Every call must have exactly one context ID.
+        // Default to a conversation call — use forProject() state to override.
         return [
             'id'               => $this->faker->uuid(),
-            'call_type'        => $this->faker->randomElement(array_column(CallType::cases(), 'value')),
-            // Default is adhoc — no conversation or project context.
-            // Use forConversation() / forProject() states to add context.
-            'conversation_id'  => null,
+            'call_type'        => CallType::Conversation->value,
+            'conversation_id'  => $this->faker->uuid(), // replaced by forConversation() / makeConversationCall()
             'project_id'       => null,
             'initiated_by'     => User::factory(),
             'room_name'        => $roomName,
-            'room_url'         => 'https://meet.jit.si/cofound-' . $roomName,
+            'room_url'         => $baseUrl . '/' . $roomName,
             'start_time'       => $startTime,
             'end_time'         => $duration
                 ? (clone $startTime)->modify("+$duration seconds")
@@ -44,7 +46,7 @@ class VideoCallFactory extends Factory
         ];
     }
 
-    // ── States ────────────────────────────────────────────────────────────────
+    // ── Status states ─────────────────────────────────────────────────────────
 
     public function scheduled(): static
     {
@@ -85,9 +87,12 @@ class VideoCallFactory extends Factory
         ]);
     }
 
+    // ── Context states ────────────────────────────────────────────────────────
+
     public function forProject(string $projectId): static
     {
         return $this->state(fn() => [
+            'call_type'       => CallType::Project->value,
             'project_id'      => $projectId,
             'conversation_id' => null,
         ]);
@@ -96,16 +101,9 @@ class VideoCallFactory extends Factory
     public function forConversation(string $conversationId): static
     {
         return $this->state(fn() => [
+            'call_type'       => CallType::Conversation->value,
             'conversation_id' => $conversationId,
             'project_id'      => null,
-        ]);
-    }
-
-    public function adhoc(): static
-    {
-        return $this->state(fn() => [
-            'project_id'      => null,
-            'conversation_id' => null,
         ]);
     }
 }
