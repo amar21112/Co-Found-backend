@@ -10,26 +10,17 @@ use App\Exceptions\Call\CallNotFoundException;
 use App\Exceptions\Call\CallNotJoinableException;
 use App\Exceptions\Call\NotACallParticipantException;
 use App\Exceptions\Call\NotCallHostException;
-use App\Models\ConversationParticipant;
-use App\Models\ProjectTeamMember;
 use App\Models\User;
 use App\Models\VideoCall;
 use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\ProjectTeamRepositoryInterface;
 use App\Repositories\Contracts\VideoCallRepositoryInterface;
+use Firebase\JWT\JWT;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 
 class VideoCallService
 {
-    /**
-     * Base URL for Jitsi Meet rooms.
-     * No SDK or API key required — Jitsi Meet is open and free.
-     * The backend controls who receives the URL via access checks;
-     * the random room name is a second layer of defense.
-     */
-    private const ROOM_BASE_URL = 'https://meet.jit.si/cofound-';
-
     public function __construct(
         private readonly VideoCallRepositoryInterface $callRepo,
         private readonly ProjectTeamRepositoryInterface $teamRepo,
@@ -37,7 +28,7 @@ class VideoCallService
     ) {}
 
     // =========================================================================
-    // List (user's own calls)
+    // List
     // =========================================================================
 
     public function listForUser(User $user, array $filters, int $perPage): LengthAwarePaginator
@@ -50,17 +41,21 @@ class VideoCallService
     // =========================================================================
 
     /**
-     * Create a new call and add the initiator as host participant.
+     * Create a new call, add the initiator as host participant, and mint
+     * their Jitsi JWT immediately.
      *
-     * Access model:
-     * - project calls  → project team members only
-     * - conversation calls → conversation participants only
-     * - ad-hoc calls   → anyone with the call ID (no context restriction)
+     * The initiator is already a participant (host) the moment they create
+     * the call, so there is no reason to make them call /join afterwards.
+     * Returning join_token here saves one round-trip and lets the frontend
+     * open the Jitsi room directly from the initiate response.
+     *
+     * room_url stored in DB is always the bare path (no token embedded).
+     * The frontend constructs the final URL as: {room_url}?jwt={join_token}
      */
     public function initiate(User $initiator, InitiateCallDTO $dto): VideoCall
     {
         $roomName = $this->generateRoomName();
-        $roomUrl  = self::ROOM_BASE_URL . $roomName;
+        $roomUrl  = $this->buildRoomUrl($roomName);
 
         $call = $this->callRepo->create($initiator, $dto, $roomName, $roomUrl);
 
@@ -70,7 +65,12 @@ class VideoCallService
             CallParticipantRole::Host->value
         );
 
-        return $call->load(['initiator', 'participants.user']);
+        $call = $call->load(['initiator', 'participants.user']);
+
+        // Mint the host token immediately — initiator goes straight to the room
+        $call->join_token = $this->mintJwt($call, $initiator);
+
+        return $call;
     }
 
     // =========================================================================
@@ -93,18 +93,22 @@ class VideoCallService
     // =========================================================================
 
     /**
-     * Join an existing call.
+     * Join a call and receive a short-lived Jitsi JWT for that room.
      *
-     * Access control rules:
-     * - Project call  → user must be an active member of the project.
-     * - Conversation call → user must be a participant in the conversation.
-     * - Ad-hoc call   → no restriction (open to any verified user with the call ID).
+     * Access control:
+     *   - Project call      → active project team member only
+     *   - Conversation call → conversation participant only
+     *   - No context        → rejected (fail-closed; should never reach here
+     *                         if InitiateCallRequest validation is enforced)
      *
      * State rules:
-     * - Cannot join a terminal (ended/cancelled) call.
-     * - Rejoining (left_at set) resets left_at to null on the existing row.
-     * - Already active in the call → idempotent, safe for reconnects.
-     * - Joining a scheduled call activates it.
+     *   - Terminal calls (ended / cancelled) cannot be joined.
+     *   - Rejoining after leave resets left_at on the existing row.
+     *   - Already active → idempotent (safe on frontend reconnect).
+     *   - Joining a scheduled call activates it.
+     *
+     * Returns the updated VideoCall model with `join_token` appended as a
+     * transient attribute so VideoCallResource can expose it.
      */
     public function join(VideoCall $call, User $user): VideoCall
     {
@@ -120,7 +124,8 @@ class VideoCallService
 
         if ($existing) {
             if ($existing->left_at === null) {
-                // Already active — idempotent return (safe on reconnect)
+                // Already active — mint a fresh token and return (safe reconnect)
+                $call->join_token = $this->mintJwt($call, $user);
                 return $call->load(['initiator', 'participants.user']);
             }
 
@@ -135,10 +140,11 @@ class VideoCallService
             );
         }
 
-        // Auto-activate if this is the first other person joining
         if ($call->isScheduled()) {
             $call = $this->callRepo->updateStatus($call, CallStatus::Active->value);
         }
+
+        $call->join_token = $this->mintJwt($call, $user);
 
         return $call->load(['initiator', 'participants.user']);
     }
@@ -238,16 +244,74 @@ class VideoCallService
     }
 
     // =========================================================================
+    // Private — JWT minting
+    // =========================================================================
+
+    /**
+     * Mint a Jitsi-compatible JWT for the given user and room.
+     *
+     * The token follows the Jitsi JWT structure:
+     *   https://github.com/jitsi/lib-jitsi-meet/blob/master/doc/tokens.md
+     *
+     * Jitsi's prosody token plugin validates:
+     *   - iss  → must match APP_ID configured in prosody
+     *   - aud  → must be "jitsi"
+     *   - sub  → the XMPP domain of your Jitsi server
+     *   - room → the specific room this token is valid for (scopes the token)
+     *   - exp  → token expiry (JITSI_TOKEN_TTL seconds from now)
+     */
+    private function mintJwt(VideoCall $call, User $user): string
+    {
+        $appId     = config('jitsi.app_id');
+        $appSecret = config('jitsi.app_secret');
+        $domain    = parse_url(config('jitsi.base_url'), PHP_URL_HOST);
+        $ttl       = (int) config('jitsi.token_ttl');
+
+        $isHost = $call->initiated_by === $user->id;
+
+        $payload = [
+            'iss'  => $appId,
+            'aud'  => 'jitsi',
+            'sub'  => $domain,
+            'room' => $call->room_name,
+            'exp'  => time() + $ttl,
+            'iat'  => time(),
+            'context' => [
+                'user' => [
+                    'id'     => $user->id,
+                    'name'   => $user->full_name,
+                    'email'  => $user->email,
+                    'avatar' => $user->profile_picture_url ?? '',
+                ],
+                'features' => [
+                    // Only the call initiator gets moderator rights
+                    'recording'  => $isHost,
+                    'livestream' => false,
+                    'outbound-call' => false,
+                ],
+            ],
+            // Jitsi uses this to grant moderator / kick rights
+            'moderator' => $isHost,
+        ];
+
+        return JWT::encode($payload, $appSecret, 'HS256');
+    }
+
+    // =========================================================================
     // Private — access enforcement
     // =========================================================================
 
     /**
      * Assert the user is allowed to join this call.
      *
-     * Context-based access:
-     *   project call      → must be active project team member
-     *   conversation call → must be conversation participant
-     *   ad-hoc call       → no restriction (direct invite via call ID)
+     * Every call must have exactly one context (project_id XOR conversation_id),
+     * enforced at creation time by InitiateCallRequest. This method is a
+     * second, independent line of defence — it fails closed if somehow a
+     * context-less call record exists (e.g. created directly in the DB,
+     * or via a future code path that bypasses the request class).
+     *
+     * The initiator is always allowed to rejoin — they created the call and
+     * already hold a host participant row.
      */
     private function assertCanJoin(VideoCall $call, User $user): void
     {
@@ -259,9 +323,7 @@ class VideoCallService
 
         // Project call — enforce project membership
         if ($call->project_id) {
-            $isMember = $this->teamRepo->isMember($call->project_id, $user->id);
-
-            if (! $isMember) {
+            if (! $this->teamRepo->isMember($call->project_id, $user->id)) {
                 throw new CallNotJoinableException();
             }
 
@@ -270,23 +332,38 @@ class VideoCallService
 
         // Conversation call — enforce conversation membership
         if ($call->conversation_id) {
-            $isParticipant = $this->conversationRepo->isParticipant($call->conversation_id, $user->id);
-
-            if (! $isParticipant) {
+            if (! $this->conversationRepo->isParticipant($call->conversation_id, $user->id)) {
                 throw new CallNotJoinableException();
             }
+
+            return;
         }
 
-        // Ad-hoc call — no restriction. The 16-char random room name
-        // and the call UUID together make accidental discovery impossible.
+        // No context at all — fail closed.
+        // A well-formed call never reaches here; this guards against
+        // corrupt data or direct DB writes bypassing validation.
+        throw new CallNotJoinableException();
+    }
+
+    // =========================================================================
+    // Private — room helpers
+    // =========================================================================
+
+    /**
+     * Build the bare room URL (no JWT). Stored in DB for reference.
+     * The frontend must use the join_token returned by /join to get access.
+     */
+    private function buildRoomUrl(string $roomName): string
+    {
+        return rtrim(config('jitsi.base_url'), '/') . '/' . $roomName;
     }
 
     /**
-     * Generate a unique cryptographically random room name.
-     * Format: cofound-<16 random chars> — keeps Jitsi rooms unguessable.
+     * 16-char cryptographically random room name — makes room enumeration
+     * infeasible even without JWT (defense in depth).
      */
     private function generateRoomName(): string
     {
-        return Str::random();
+        return 'cofound-' . Str::random();
     }
 }
