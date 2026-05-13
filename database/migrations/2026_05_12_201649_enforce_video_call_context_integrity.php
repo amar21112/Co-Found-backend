@@ -56,13 +56,25 @@ return new class extends Migration
             });
 
         } else {
-            // ── 1. Update call_type enum ──────────────────────────────────────
+            // ── 1. First, alter the ENUM to include both old and new values ──────
+            DB::statement("
+                ALTER TABLE video_calls
+                MODIFY COLUMN call_type ENUM('direct', 'group', 'conversation', 'project') NOT NULL
+            ");
+
+            // ── 2. Now migrate existing data safely ─────────────────────────────
+            DB::statement("
+                UPDATE video_calls SET call_type = 'conversation'
+                WHERE call_type IN ('direct', 'group')
+            ");
+
+            // ── 3. Remove the old ENUM values ───────────────────────────────────
             DB::statement("
                 ALTER TABLE video_calls
                 MODIFY COLUMN call_type ENUM('conversation', 'project') NOT NULL
             ");
 
-            // ── 2. Add mutual-exclusivity check constraint ────────────────────
+            // ── 4. Add mutual-exclusivity check constraint ──────────────────────
             DB::statement("
                 ALTER TABLE video_calls
                 ADD CONSTRAINT chk_video_calls_single_context
