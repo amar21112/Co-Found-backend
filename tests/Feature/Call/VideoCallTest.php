@@ -10,6 +10,7 @@ use App\Models\ProjectTeamMember;
 use App\Models\User;
 use App\Models\VideoCall;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -30,7 +31,9 @@ class VideoCallTest extends TestCase
 
     private function makeCall(User $initiator, array $overrides = []): VideoCall
     {
-        $call = VideoCall::factory()->scheduled()->adhoc()->create(array_merge(
+        $conversation = Conversation::factory()->create();
+
+        $call = VideoCall::factory()->scheduled()->forConversation($conversation->id)->create(array_merge(
             ['initiated_by' => $initiator->id],
             $overrides
         ));
@@ -45,7 +48,9 @@ class VideoCallTest extends TestCase
 
     private function makeActiveCall(User $initiator, array $overrides = []): VideoCall
     {
-        $call = VideoCall::factory()->active()->adhoc()->create(array_merge(
+        $conversation = Conversation::factory()->create();
+
+        $call = VideoCall::factory()->active()->forConversation($conversation->id)->create(array_merge(
             ['initiated_by' => $initiator->id],
             $overrides
         ));
@@ -60,7 +65,9 @@ class VideoCallTest extends TestCase
 
     private function makeEndedCall(User $initiator): VideoCall
     {
-        return VideoCall::factory()->ended()->create([
+        $conversation = Conversation::factory()->create();
+
+        return VideoCall::factory()->ended()->forConversation($conversation->id)->create([
             'initiated_by' => $initiator->id,
         ]);
     }
@@ -130,12 +137,9 @@ class VideoCallTest extends TestCase
         $other = $this->makeUser();
         Sanctum::actingAs($user);
 
-        // Calls initiated by the user
         $this->makeActiveCall($user);
         $this->makeCall($user);
-
-        // Call by another user — should NOT appear
-        $this->makeActiveCall($other);
+        $this->makeActiveCall($other); // should NOT appear
 
         $this->getJson('/api/v1/calls')
             ->assertStatus(200)
@@ -179,16 +183,17 @@ class VideoCallTest extends TestCase
     // =========================================================================
 
     /** @test */
-    public function verified_user_can_initiate_a_direct_call(): void
+    public function verified_user_can_initiate_a_conversation_call(): void
     {
-        $user = $this->makeUser();
+        $user         = $this->makeUser();
+        $conversation = Conversation::factory()->create();
         Sanctum::actingAs($user);
 
         $this->postJson('/api/v1/calls', [
-            'call_type' => 'direct',
-            'status'    => 'scheduled',
+            'conversation_id' => $conversation->id,
+            'status'          => 'scheduled',
         ])->assertStatus(201)
-            ->assertJsonPath('data.call_type', 'direct')
+            ->assertJsonPath('data.call_type', 'conversation')
             ->assertJsonPath('data.status', 'scheduled')
             ->assertJsonStructure([
                 'data' => ['id', 'call_type', 'status', 'room_name', 'room_url', 'initiator'],
@@ -196,8 +201,9 @@ class VideoCallTest extends TestCase
 
         $call = VideoCall::where('initiated_by', $user->id)->first();
         $this->assertNotNull($call);
+        $this->assertEquals($conversation->id, $call->conversation_id);
+        $this->assertNull($call->project_id);
 
-        // Initiator auto-added as host
         $this->assertDatabaseHas('call_participants', [
             'call_id' => $call->id,
             'user_id' => $user->id,
@@ -206,55 +212,131 @@ class VideoCallTest extends TestCase
     }
 
     /** @test */
-    public function room_url_is_returned_to_the_initiator(): void
+    public function verified_user_can_initiate_a_project_call(): void
     {
+        $user    = $this->makeUser();
+        $project = Project::factory()->create(['owner_id' => $user->id]);
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/v1/calls', [
+            'project_id' => $project->id,
+            'status'     => 'scheduled',
+        ])->assertStatus(201)
+            ->assertJsonPath('data.call_type', 'project')
+            ->assertJsonPath('data.status', 'scheduled');
+
+        $call = VideoCall::where('initiated_by', $user->id)->first();
+        $this->assertEquals($project->id, $call->project_id);
+        $this->assertNull($call->conversation_id);
+    }
+
+    /** @test */
+    public function call_cannot_be_initiated_without_a_context_id(): void
+    {
+        // Ad-hoc calls are not supported — every call must be anchored.
         Sanctum::actingAs($this->makeUser());
 
-        $response = $this->postJson('/api/v1/calls', ['call_type' => 'direct'])
+        $this->postJson('/api/v1/calls')
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['context']);
+    }
+
+    /** @test */
+    public function call_cannot_be_initiated_with_both_context_ids(): void
+    {
+        // A call cannot belong to two contexts simultaneously.
+        $user         = $this->makeUser();
+        $conversation = Conversation::factory()->create();
+        $project      = Project::factory()->create(['owner_id' => $user->id]);
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/v1/calls', [
+            'conversation_id' => $conversation->id,
+            'project_id'      => $project->id,
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['context']);
+    }
+
+    /** @test */
+    public function call_type_is_derived_from_context_not_sent_by_client(): void
+    {
+        // The client sends a context ID; call_type is set by the backend.
+        // Sending call_type explicitly should have no effect.
+        $user         = $this->makeUser();
+        $conversation = Conversation::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/calls', [
+            'conversation_id' => $conversation->id,
+            // even if someone tries to pass call_type, the backend ignores it
+        ])->assertStatus(201);
+
+        $this->assertEquals('conversation', $response->json('data.call_type'));
+    }
+
+    /** @test */
+    public function room_name_uses_cofound_prefix(): void
+    {
+        $conversation = Conversation::factory()->create();
+        Sanctum::actingAs($this->makeUser());
+
+        $this->postJson('/api/v1/calls', ['conversation_id' => $conversation->id])
             ->assertStatus(201);
 
-        $this->assertNotNull($response->json('data.room_url'));
-        $this->assertStringContainsString('meet.jit.si', $response->json('data.room_url'));
+        $call = VideoCall::latest()->first();
+        $this->assertStringStartsWith('cofound-', $call->room_name);
+        $this->assertEquals(24, strlen($call->room_name)); // 'cofound-' (8) + 16 random chars
+    }
+
+    /** @test */
+    public function initiate_returns_join_token_for_the_host(): void
+    {
+        $conversation = Conversation::factory()->create();
+        Sanctum::actingAs($this->makeUser());
+
+        $response = $this->postJson('/api/v1/calls', ['conversation_id' => $conversation->id])
+            ->assertStatus(201);
+
+        $token = $response->json('data.join_token');
+        $this->assertNotNull($token);
+        $this->assertCount(3, explode('.', $token));
+    }
+
+    /** @test */
+    public function initiator_calling_join_after_initiate_gets_a_fresh_token(): void
+    {
+        $initiator = $this->makeUser();
+        $call      = $this->makeCall($initiator);
+        Sanctum::actingAs($initiator);
+
+        $response = $this->postJson("/api/v1/calls/$call->id/join")
+            ->assertStatus(200);
+
+        $this->assertNotNull($response->json('data.join_token'));
     }
 
     /** @test */
     public function can_initiate_a_call_as_immediately_active(): void
     {
+        $conversation = Conversation::factory()->create();
         Sanctum::actingAs($this->makeUser());
 
-        $this->postJson('/api/v1/calls', ['call_type' => 'direct', 'status' => 'active'])
-            ->assertStatus(201)
+        $this->postJson('/api/v1/calls', [
+            'conversation_id' => $conversation->id,
+            'status'          => 'active',
+        ])->assertStatus(201)
             ->assertJsonPath('data.status', 'active');
-    }
-
-    /** @test */
-    public function call_type_is_required(): void
-    {
-        Sanctum::actingAs($this->makeUser());
-
-        $this->postJson('/api/v1/calls')
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['call_type']);
-    }
-
-    /** @test */
-    public function invalid_call_type_is_rejected(): void
-    {
-        Sanctum::actingAs($this->makeUser());
-
-        $this->postJson('/api/v1/calls', ['call_type' => 'invalid'])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors(['call_type']);
     }
 
     /** @test */
     public function start_time_in_the_past_is_rejected(): void
     {
+        $conversation = Conversation::factory()->create();
         Sanctum::actingAs($this->makeUser());
 
         $this->postJson('/api/v1/calls', [
-            'call_type'  => 'direct',
-            'start_time' => now()->subHour()->toISOString(),
+            'conversation_id' => $conversation->id,
+            'start_time'      => now()->subHour()->toISOString(),
         ])->assertStatus(422)
             ->assertJsonValidationErrors(['start_time']);
     }
@@ -262,7 +344,9 @@ class VideoCallTest extends TestCase
     /** @test */
     public function unauthenticated_user_cannot_initiate_calls(): void
     {
-        $this->postJson('/api/v1/calls', ['call_type' => 'direct'])
+        $conversation = Conversation::factory()->create();
+
+        $this->postJson('/api/v1/calls', ['conversation_id' => $conversation->id])
             ->assertStatus(401);
     }
 
@@ -311,6 +395,21 @@ class VideoCallTest extends TestCase
     }
 
     /** @test */
+    public function show_does_not_expose_join_token(): void
+    {
+        // GET /calls/{id} is a read-only endpoint — it never issues a token.
+        // Tokens are issued only by POST /calls (initiate, host only) and
+        // POST /calls/{id}/join (any permitted participant).
+        $initiator = $this->makeUser();
+        $call      = $this->makeCall($initiator);
+        Sanctum::actingAs($initiator);
+
+        $response = $this->getJson("/api/v1/calls/$call->id")->assertStatus(200);
+
+        $this->assertArrayNotHasKey('join_token', $response->json('data'));
+    }
+
+    /** @test */
     public function show_returns_404_for_unknown_call(): void
     {
         Sanctum::actingAs($this->makeUser());
@@ -320,15 +419,108 @@ class VideoCallTest extends TestCase
     }
 
     // =========================================================================
-    // POST /api/v1/calls/{id}/join — ad-hoc
+    // POST /api/v1/calls/{id}/join — JWT token issuance
     // =========================================================================
 
     /** @test */
-    public function user_can_join_an_adhoc_scheduled_call(): void
+    public function join_returns_a_jwt_token(): void
     {
         $initiator = $this->makeUser();
         $joiner    = $this->makeUser();
         $call      = $this->makeCall($initiator);
+        // Joiner must be a conversation participant to pass assertCanJoin
+        $this->addToConversation(Conversation::find($call->conversation_id), $joiner);
+        Sanctum::actingAs($joiner);
+
+        $response = $this->postJson("/api/v1/calls/$call->id/join")
+            ->assertStatus(200);
+
+        $token = $response->json('data.join_token');
+        $this->assertNotNull($token);
+        $this->assertNotEmpty($token);
+        $this->assertCount(3, explode('.', $token));
+    }
+
+    /** @test */
+    public function initiator_receives_jwt_on_join(): void
+    {
+        $initiator = $this->makeUser();
+        $call      = $this->makeCall($initiator);
+        // Initiator is always allowed — no conversation membership needed
+        Sanctum::actingAs($initiator);
+
+        $response = $this->postJson("/api/v1/calls/$call->id/join")
+            ->assertStatus(200);
+
+        $this->assertNotNull($response->json('data.join_token'));
+    }
+
+    /** @test */
+    public function join_token_is_not_persisted_to_database(): void
+    {
+        $initiator = $this->makeUser();
+        $joiner    = $this->makeUser();
+        $call      = $this->makeCall($initiator);
+        $this->addToConversation(Conversation::find($call->conversation_id), $joiner);
+        Sanctum::actingAs($joiner);
+
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        // Confirm join_token is never written to the video_calls row
+        $record = DB::table('video_calls')->where('id', $call->id)->first();
+        $this->assertFalse(property_exists($record, 'join_token'));
+    }
+
+    /** @test */
+    public function rejoining_after_leave_issues_a_fresh_token(): void
+    {
+        $initiator = $this->makeUser();
+        $call      = $this->makeActiveCall($initiator);
+        $joiner    = $this->makeUser();
+        // Must be in the conversation, even when rejoining via an existing participant row
+        $this->addToConversation(Conversation::find($call->conversation_id), $joiner);
+
+        CallParticipant::factory()->left()->create([
+            'call_id' => $call->id,
+            'user_id' => $joiner->id,
+        ]);
+        Sanctum::actingAs($joiner);
+
+        $response = $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        $this->assertNotNull($response->json('data.join_token'));
+    }
+
+    /** @test */
+    public function reconnecting_while_already_active_issues_a_fresh_token(): void
+    {
+        // Idempotent join (already active) must still return a token so
+        // the client can reconnect after a page refresh / network drop.
+        $initiator = $this->makeUser();
+        $call      = $this->makeActiveCall($initiator);
+        Sanctum::actingAs($initiator);
+
+        $r1 = $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+        $r2 = $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        $this->assertNotNull($r1->json('data.join_token'));
+        $this->assertNotNull($r2->json('data.join_token'));
+    }
+
+    // =========================================================================
+    // POST /api/v1/calls/{id}/join — conversation access control
+    // =========================================================================
+
+    /** @test */
+    public function conversation_participant_can_join_a_conversation_call(): void
+    {
+        $initiator    = $this->makeUser();
+        $joiner       = $this->makeUser();
+        $conversation = Conversation::factory()->create();
+        $this->addToConversation($conversation, $initiator);
+        $this->addToConversation($conversation, $joiner);
+
+        $call = $this->makeConversationCall($initiator, $conversation);
         Sanctum::actingAs($joiner);
 
         $this->postJson("/api/v1/calls/$call->id/join")
@@ -343,11 +535,29 @@ class VideoCallTest extends TestCase
     }
 
     /** @test */
+    public function non_conversation_member_cannot_join_conversation_call(): void
+    {
+        $initiator    = $this->makeUser();
+        $outsider     = $this->makeUser();
+        $conversation = Conversation::factory()->create();
+        $this->addToConversation($conversation, $initiator);
+
+        $call = $this->makeConversationCall($initiator, $conversation);
+        Sanctum::actingAs($outsider);
+
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(409);
+    }
+
+    /** @test */
     public function joining_a_scheduled_call_activates_it(): void
     {
-        $initiator = $this->makeUser();
-        $joiner    = $this->makeUser();
-        $call      = $this->makeCall($initiator);
+        $initiator    = $this->makeUser();
+        $joiner       = $this->makeUser();
+        $conversation = Conversation::factory()->create();
+        $this->addToConversation($conversation, $initiator);
+        $this->addToConversation($conversation, $joiner);
+
+        $call = $this->makeConversationCall($initiator, $conversation);
         Sanctum::actingAs($joiner);
 
         $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
@@ -365,7 +575,6 @@ class VideoCallTest extends TestCase
         $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
         $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
 
-        // Still only one participant record for the initiator
         $this->assertDatabaseCount('call_participants', 1);
     }
 
@@ -376,7 +585,10 @@ class VideoCallTest extends TestCase
         $call      = $this->makeActiveCall($initiator);
         $joiner    = $this->makeUser();
 
-        // Create participant row that has already left
+        // Add joiner to the underlying conversation so they pass assertCanJoin
+        $conversation = Conversation::find($call->conversation_id);
+        $this->addToConversation($conversation, $joiner);
+
         CallParticipant::factory()->left()->create([
             'call_id' => $call->id,
             'user_id' => $joiner->id,
@@ -385,17 +597,11 @@ class VideoCallTest extends TestCase
 
         $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
 
-        // Should still be only one row (updated, not duplicated)
-        $count = CallParticipant::where('call_id', $call->id)
-            ->where('user_id', $joiner->id)
-            ->count();
-        $this->assertEquals(1, $count);
-
-        // Row should now be active again
         $participant = CallParticipant::where('call_id', $call->id)
             ->where('user_id', $joiner->id)
             ->first();
         $this->assertNull($participant->left_at);
+        $this->assertDatabaseCount('call_participants', 2); // host + rejoined participant
     }
 
     /** @test */
@@ -409,7 +615,7 @@ class VideoCallTest extends TestCase
     }
 
     // =========================================================================
-    // POST /api/v1/calls/{id}/join — access control
+    // POST /api/v1/calls/{id}/join — project access control
     // =========================================================================
 
     /** @test */
@@ -434,35 +640,6 @@ class VideoCallTest extends TestCase
         $outsider  = $this->makeUser();
 
         $call = $this->makeProjectCall($initiator, $project);
-        Sanctum::actingAs($outsider);
-
-        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(409);
-    }
-
-    /** @test */
-    public function conversation_participant_can_join_conversation_call(): void
-    {
-        $initiator    = $this->makeUser();
-        $conversation = Conversation::factory()->create();
-        $participant  = $this->makeUser();
-        $this->addToConversation($conversation, $initiator);
-        $this->addToConversation($conversation, $participant);
-
-        $call = $this->makeConversationCall($initiator, $conversation);
-        Sanctum::actingAs($participant);
-
-        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
-    }
-
-    /** @test */
-    public function non_conversation_member_cannot_join_conversation_call(): void
-    {
-        $initiator    = $this->makeUser();
-        $conversation = Conversation::factory()->create();
-        $outsider     = $this->makeUser();
-        $this->addToConversation($conversation, $initiator);
-
-        $call = $this->makeConversationCall($initiator, $conversation);
         Sanctum::actingAs($outsider);
 
         $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(409);
@@ -574,8 +751,9 @@ class VideoCallTest extends TestCase
     /** @test */
     public function ended_call_records_duration_seconds(): void
     {
-        $initiator = $this->makeUser();
-        $call      = VideoCall::factory()->active()->adhoc()->create([
+        $initiator    = $this->makeUser();
+        $conversation = Conversation::factory()->create();
+        $call         = VideoCall::factory()->active()->forConversation($conversation->id)->create([
             'initiated_by' => $initiator->id,
             'start_time'   => now()->subMinutes(5),
         ]);
@@ -619,7 +797,7 @@ class VideoCallTest extends TestCase
     public function host_can_cancel_a_scheduled_call(): void
     {
         $initiator = $this->makeUser();
-        $call      = $this->makeCall($initiator); // scheduled
+        $call      = $this->makeCall($initiator);
         Sanctum::actingAs($initiator);
 
         $this->patchJson("/api/v1/calls/$call->id/cancel")
@@ -639,9 +817,7 @@ class VideoCallTest extends TestCase
         $call      = $this->makeActiveCall($initiator);
         Sanctum::actingAs($initiator);
 
-        // Active calls must use end(), not cancel()
-        $this->patchJson("/api/v1/calls/$call->id/cancel")
-            ->assertStatus(409);
+        $this->patchJson("/api/v1/calls/$call->id/cancel")->assertStatus(409);
     }
 
     /** @test */
@@ -651,8 +827,7 @@ class VideoCallTest extends TestCase
         $call      = $this->makeEndedCall($initiator);
         Sanctum::actingAs($initiator);
 
-        $this->patchJson("/api/v1/calls/$call->id/cancel")
-            ->assertStatus(409);
+        $this->patchJson("/api/v1/calls/$call->id/cancel")->assertStatus(409);
     }
 
     /** @test */
@@ -662,19 +837,16 @@ class VideoCallTest extends TestCase
         $call      = $this->makeCall($initiator);
         Sanctum::actingAs($this->makeUser());
 
-        $this->patchJson("/api/v1/calls/$call->id/cancel")
-            ->assertStatus(403);
+        $this->patchJson("/api/v1/calls/$call->id/cancel")->assertStatus(403);
     }
 
     /** @test */
     public function cannot_end_a_scheduled_call_use_cancel_instead(): void
     {
         $initiator = $this->makeUser();
-        $call      = $this->makeCall($initiator); // scheduled
+        $call      = $this->makeCall($initiator);
         Sanctum::actingAs($initiator);
 
-        // end() on a scheduled call should return 409 — use cancel() instead
-        $this->patchJson("/api/v1/calls/$call->id/end")
-            ->assertStatus(409);
+        $this->patchJson("/api/v1/calls/$call->id/end")->assertStatus(409);
     }
 }

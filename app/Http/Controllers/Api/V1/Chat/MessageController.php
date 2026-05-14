@@ -19,7 +19,6 @@ class MessageController extends Controller
 {
     public function __construct(
         private readonly MessageService             $service,
-        private readonly MessageRepositoryInterface $messageRepo,
     ) {}
 
     /**
@@ -138,6 +137,8 @@ class MessageController extends Controller
      */
     public function addReaction(AddReactionRequest $request, Conversation $conversation, Message $message): JsonResponse
     {
+        $this->authorize('view', $conversation);
+
         $this->service->addReaction(
             user:     $request->user(),
             message:  $message,
@@ -154,6 +155,8 @@ class MessageController extends Controller
     public function removeReaction(Request $request, Conversation $conversation, Message $message): JsonResponse
     {
         $request->validate(['reaction' => 'required|string|max:50']);
+
+        $this->authorize('view', $conversation);
 
         $this->service->removeReaction(
             user:     $request->user(),

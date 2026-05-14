@@ -27,5 +27,9 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="JITSI_BASE_URL" value="https://meet.test"/>
+        <env name="JITSI_APP_ID" value="cofound-test"/>
+        <env name="JITSI_APP_SECRET" value="test-secret-key-for-jwt-very-long-key"/>
+        <env name="JITSI_TOKEN_TTL" value="3600"/>
     </php>
 </phpunit>

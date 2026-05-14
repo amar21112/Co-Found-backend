@@ -22,7 +22,24 @@ class UserFactory extends Factory
             'username'                    => $this->faker->unique()->userName(),
             'password'                    => Hash::make('password'),
             'full_name'                   => $this->faker->name(),
-            'profile_picture_url'         => $this->faker->imageUrl(200, 200, 'people'),
+
+            // ── Profile picture ───────────────────────────────────────────────
+            // Set to null by default.
+            //
+            // The previous value ($this->faker->imageUrl()) generated an external
+            // HTTP URL. That breaks ProfilePictureService because toUrl() calls
+            // asset('storage/' . $path), which would produce a nonsensical URL
+            // for an http:// string.
+            //
+            // For tests that need a picture, use the withProfilePicture() state
+            // which sets a realistic relative path, or upload a real file via
+            // ProfilePictureService::store() in the test setup.
+            //
+            // Existing DB records with old HTTP URLs are handled gracefully:
+            // ProfilePictureService::toUrl() detects isExternalUrl() and returns
+            // the value unchanged, so NO database migration is needed.
+            'profile_picture_url'         => null,
+
             'bio'                         => $this->faker->paragraph(),
             'location'                    => $this->faker->city() . ', ' . $this->faker->country(),
             'website_url'                 => $this->faker->url(),
@@ -162,6 +179,29 @@ class UserFactory extends Factory
             'account_status'              => AccountStatus::Active->value,
             'identity_verified'           => true,
             'identity_verification_level' => IdentityVerificationLevel::Advanced->value,
+        ]);
+    }
+
+    // ── Profile picture state ─────────────────────────────────────────────────
+
+    /**
+     * Sets a fake but correctly-formatted relative storage path.
+     *
+     * Use this in tests that exercise picture URL resolution or deletion:
+     *
+     *   $user = User::factory()->withProfilePicture()->create();
+     *   $user->profile_picture_url === "profile_pictures/{uuid}.jpg"
+     *   UserResource resolves it to the full storage URL via asset().
+     *
+     * If the test also needs the file to physically exist on the fake disk:
+     *   Storage::fake('public');
+     *   $user = User::factory()->withProfilePicture()->create();
+     *   Storage::disk('public')->put($user->profile_picture_url, 'fake-content');
+     */
+    public function withProfilePicture(): static
+    {
+        return $this->state(fn() => [
+            'profile_picture_url' => 'profile_pictures/' . Str::uuid() . '.jpg',
         ]);
     }
 }
