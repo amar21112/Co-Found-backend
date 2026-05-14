@@ -29,7 +29,18 @@ class ProjectController extends Controller
      */
     public function index(ListProjectsRequest $request): AnonymousResourceCollection
     {
+        if($request->validated('is_user_participant') ){
+            $user = $request->user();
+           if($user->role == 'guest' || !$user->is_active){
+              $request->merge([
+                'is_user_participant' => false,
+                'role' => 'all'
+            ]);
+           }
+        }
+
         $projects = $this->service->list(
+            user: $request->user(),
             filters: $request->validated(),
             perPage: (int) $request->input('per_page', 15),
         );
