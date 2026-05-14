@@ -16,6 +16,7 @@ class ListProjectsRequest extends FormRequest
         return [
             'is_user_participant' => 'nullable|boolean',
             'role' => [
+                'nullable',
                 'exclude_if:is_user_participant,false',
                 'string',
                 'in:all,owner,member,admin',
