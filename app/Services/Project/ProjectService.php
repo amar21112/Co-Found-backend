@@ -23,9 +23,9 @@ class ProjectService
         private readonly ProjectTeamRepositoryInterface  $teamRepo,
     ) {}
 
-    public function list(array $filters, int $perPage): LengthAwarePaginator
+    public function list(User $user, array $filters, int $perPage): LengthAwarePaginator
     {
-        return $this->projectRepo->paginate($filters, $perPage);
+        return $this->projectRepo->paginate($user, $filters, $perPage);
     }
 
     public function myProjects(User $user, array $filters, int $perPage): LengthAwarePaginator

@@ -9,7 +9,7 @@ use App\Models\User;
 
 interface ProjectRepositoryInterface
 {
-    public function paginate(array $filters, int $perPage): LengthAwarePaginator;
+    public function paginate(User $user, array $filters, int $perPage): LengthAwarePaginator;
 
     public function findById(string $id): ?Project;
 
