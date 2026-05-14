@@ -17,7 +17,7 @@ class UserConnectionFactory extends Factory
             'requester_id'     => User::factory(),
             'recipient_id'     => User::factory(),
             'status'           => $this->faker->randomElement(['pending', 'accepted', 'rejected', 'blocked']),
-            'connection_type'  => $this->faker->randomElement(['co_founder', 'collaborator', 'mentor', 'mentee', null]),
+            'connection_type'  => $this->faker->randomElement(['collaborator', 'mentor', 'mentee', null]),
         ];
     }
 

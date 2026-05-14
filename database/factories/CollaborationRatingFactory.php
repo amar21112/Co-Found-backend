@@ -36,4 +36,9 @@ class CollaborationRatingFactory extends Factory
             'visibility'              => $this->faker->randomElement(['public', 'private', 'anonymous']),
         ];
     }
+
+    public function public(): static
+    {
+        return $this->state(fn() => ['visibility' => 'public']);
+    }
 }

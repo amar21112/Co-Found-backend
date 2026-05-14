@@ -17,7 +17,7 @@ class MessageFactory extends Factory
             'id'                     => $this->faker->uuid(),
             'conversation_id'        => Conversation::factory(),
             'sender_id'              => User::factory(),
-            'message_type'           => $this->faker->randomElement(['text', 'text', 'text', 'image', 'file', 'system']),
+            'message_type'           => $this->faker->randomElement(['text', 'text', 'text', 'system', 'file', 'poll']),
             'content'                => $this->faker->paragraph(),
             'formatted_content'      => null,
             'replied_to_message_id'  => null,

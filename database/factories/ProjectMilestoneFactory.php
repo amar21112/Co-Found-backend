@@ -12,7 +12,7 @@ class ProjectMilestoneFactory extends Factory
 
     public function definition(): array
     {
-        $status = $this->faker->randomElement(['pending', 'in_progress', 'completed', 'overdue']);
+        $status = $this->faker->randomElement(['pending', 'in_progress', 'completed', 'delayed']);
 
         return [
             'id'             => $this->faker->uuid(),

@@ -2,11 +2,21 @@
 
 namespace App\Http\Requests\Project;
 
+use App\Enums\RestrictionType;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CreateProjectRequest extends FormRequest
 {
-    public function authorize(): bool { return true; }
+    public function authorize(): bool
+    {
+        // auth:sanctum, no.guest, and verified middleware already enforce
+        // authentication, guest exclusion, and email verification before
+        // this request is resolved. Only the posting_ban restriction is
+        // a request-level concern.
+        return !$this->user()->activeRestrictions()
+            ->where('restriction_type', RestrictionType::PostingBan->value)
+            ->exists();
+    }
 
     public function rules(): array
     {

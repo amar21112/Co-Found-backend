@@ -37,6 +37,17 @@ class NotificationFactory extends Factory
 
     public function unread(): static
     {
-        return $this->state(fn() => ['read' => false, 'read_at' => null]);
+        return $this->state(fn() => [
+            'read'    => false,
+            'read_at' => null,
+        ]);
+    }
+
+    public function read(): static
+    {
+        return $this->state(fn() => [
+            'read'    => true,
+            'read_at' => now(),
+        ]);
     }
 }
