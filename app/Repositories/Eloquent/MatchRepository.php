@@ -21,7 +21,7 @@ class MatchRepository implements MatchRepositoryInterface
         $query = MatchModel::where('user_id', $user->id)
             ->with(['matchedUser', 'matchedProject']);
 
-        if (! empty($filters['match_type'])) {
+        if (!empty($filters['match_type'])) {
             $query->where('match_type', $filters['match_type']);
         }
 
@@ -38,7 +38,7 @@ class MatchRepository implements MatchRepositoryInterface
         }
 
         $allowed = ['compatibility_score', 'created_at', 'expires_at'];
-        $sortBy  = in_array($filters['sort_by'] ?? '', $allowed)
+        $sortBy = in_array($filters['sort_by'] ?? '', $allowed)
             ? $filters['sort_by']
             : 'created_at';
         $sortDir = ($filters['sort_dir'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
@@ -53,9 +53,9 @@ class MatchRepository implements MatchRepositoryInterface
 
     public function markViewed(MatchModel $match): MatchModel
     {
-        if (! $match->viewed) {
+        if (!$match->viewed) {
             $match->update([
-                'viewed'    => true,
+                'viewed' => true,
                 'viewed_at' => now(),
             ]);
         }
@@ -65,7 +65,7 @@ class MatchRepository implements MatchRepositoryInterface
 
     public function toggleSave(MatchModel $match): MatchModel
     {
-        $match->update(['saved' => ! $match->saved]);
+        $match->update(['saved' => !$match->saved]);
         return $match->load(['matchedUser', 'matchedProject']);
     }
 
@@ -77,13 +77,13 @@ class MatchRepository implements MatchRepositoryInterface
     }
 
     public function createFeedback(
-        MatchModel       $match,
-        User             $user,
+        MatchModel $match,
+        User $user,
         SubmitFeedbackDTO $dto
     ): MatchFeedback {
         return MatchFeedback::create([
-            'match_id'      => $match->id,
-            'user_id'       => $user->id,
+            'match_id' => $match->id,
+            'user_id' => $user->id,
             'feedback_type' => $dto->feedbackType->value,
         ]);
     }
@@ -125,23 +125,23 @@ class MatchRepository implements MatchRepositoryInterface
                 if ($existing) {
                     $existing->update([
                         'compatibility_score' => $dto->compatibilityScore,
-                        'match_reasons'       => $dto->matchReasons,
-                        'expires_at'          => $dto->expiresAt,
+                        'match_reasons' => $dto->matchReasons,
+                        'expires_at' => $dto->expiresAt,
                     ]);
                     $updated++;
                 } else {
                     MatchModel::create([
-                        'id'                  => (string) Str::uuid(),
-                        'user_id'             => $dto->userId,
-                        'match_type'          => $dto->matchType,
-                        'matched_user_id'     => $dto->matchedUserId,
-                        'matched_project_id'  => $dto->matchedProjectId,
+                        'id' => (string) Str::uuid(),
+                        'user_id' => $dto->userId,
+                        'match_type' => $dto->matchType,
+                        'matched_user_id' => $dto->matchedUserId,
+                        'matched_project_id' => $dto->matchedProjectId,
                         'compatibility_score' => $dto->compatibilityScore,
-                        'match_reasons'       => $dto->matchReasons,
-                        'expires_at'          => $dto->expiresAt,
-                        'viewed'              => false,
-                        'saved'               => false,
-                        'action_taken'        => false,
+                        'match_reasons' => $dto->matchReasons,
+                        'expires_at' => $dto->expiresAt,
+                        'viewed' => false,
+                        'saved' => false,
+                        'action_taken' => false,
                     ]);
                     $created++;
                 }
@@ -158,19 +158,25 @@ class MatchRepository implements MatchRepositoryInterface
                 $join->on('mf.match_id', '=', 'm.id')
                     ->whereRaw('mf.user_id = m.user_id');
             })
-            ->leftJoin('users AS u',   'u.id',  '=', 'm.user_id')
-            ->leftJoin('users AS mu',  'mu.id', '=', 'm.matched_user_id')
+            ->leftJoin('users AS u', 'u.id', '=', 'm.user_id')
+            ->leftJoin('users AS mu', 'mu.id', '=', 'm.matched_user_id')
             ->leftJoin('projects AS mp', 'mp.id', '=', 'm.matched_project_id')
             ->select([
-                'm.id', 'm.match_type', 'm.compatibility_score', 'm.match_reasons',
-                'm.viewed', 'm.saved', 'm.action_taken',
+                'm.id',
+                'm.match_type',
+                'm.compatibility_score',
+                'm.match_reasons',
+                'm.viewed',
+                'm.saved',
+                'm.action_taken',
                 'mf.feedback_type',
                 'u.identity_verified AS user_identity_verified',
                 'u.location AS user_location',
                 'mu.identity_verified AS matched_user_identity_verified',
                 'mu.location AS matched_user_location',
                 'mp.is_accepting_applications AS project_accepting',
-                'mp.current_team_size', 'mp.team_size_max',
+                'mp.current_team_size',
+                'mp.team_size_max',
                 'm.created_at',
             ])
             ->where('m.compatibility_score', '>=', $dto->minScore)
@@ -212,12 +218,12 @@ class MatchRepository implements MatchRepositoryInterface
             ->first();
 
         return [
-            'total_matches'         => $total,
-            'by_type'               => $byType,
-            'total_feedback'        => $feedbackCount,
-            'feedback_rate'         => $total > 0 ? round($feedbackCount / $total, 4) : 0,
+            'total_matches' => $total,
+            'by_type' => $byType,
+            'total_feedback' => $feedbackCount,
+            'feedback_rate' => $total > 0 ? round($feedbackCount / $total, 4) : 0,
             'feedback_distribution' => $feedbackDist,
-            'score_stats'           => $scoreStats,
+            'score_stats' => $scoreStats,
         ];
     }
 
@@ -230,25 +236,25 @@ class MatchRepository implements MatchRepositoryInterface
         $reasons = json_decode($row->match_reasons ?? '{}', true) ?: [];
 
         $reasons['overlapping_skills_count'] = count($reasons['overlapping_skills'] ?? []);
-        $reasons['covered_skills_count']     = count($reasons['covered_skills']     ?? []);
+        $reasons['covered_skills_count'] = count($reasons['covered_skills'] ?? []);
         unset($reasons['overlapping_skills'], $reasons['covered_skills']);
 
         return array_merge([
-            'id'                     => $row->id,
-            'match_type'             => $row->match_type,
-            'compatibility_score'    => $row->compatibility_score,
-            'viewed'                 => (int) $row->viewed,
-            'saved'                  => (int) $row->saved,
-            'action_taken'           => (int) $row->action_taken,
-            'feedback_type'          => $row->feedback_type ?? '',
-            'label_relevant'         => (int) ($row->feedback_type === 'relevant'),
-            'label_not_relevant'     => (int) ($row->feedback_type === 'not_relevant'),
+            'id' => $row->id,
+            'match_type' => $row->match_type,
+            'compatibility_score' => $row->compatibility_score,
+            'viewed' => (int) $row->viewed,
+            'saved' => (int) $row->saved,
+            'action_taken' => (int) $row->action_taken,
+            'feedback_type' => $row->feedback_type ?? '',
+            'label_relevant' => (int) ($row->feedback_type === 'relevant'),
+            'label_not_relevant' => (int) ($row->feedback_type === 'not_relevant'),
             'user_identity_verified' => (int) $row->user_identity_verified,
-            'same_location'          => $row->user_location && $row->matched_user_location
+            'same_location' => $row->user_location && $row->matched_user_location
                 ? (int) ($row->user_location === $row->matched_user_location)
                 : ($reasons['location_match'] ?? 0),
-            'project_accepting'      => $row->project_accepting ?? 0,
-            'team_openness'          => ($row->team_size_max ?? 0) > 0
+            'project_accepting' => $row->project_accepting ?? 0,
+            'team_openness' => ($row->team_size_max ?? 0) > 0
                 ? round(($row->team_size_max - $row->current_team_size) / $row->team_size_max, 3)
                 : ($reasons['team_openness'] ?? 0),
         ], $reasons);
