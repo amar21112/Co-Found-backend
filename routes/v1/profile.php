@@ -39,7 +39,7 @@ Route::middleware(['auth:sanctum', 'no.guest', 'verified'])->group(function () {
 
     Route::prefix('profile')->group(function () {
         Route::get('/',                 [ProfileController::class, 'show']);
-        Route::put('/',                 [ProfileController::class, 'update']);
+        Route::match(['put', 'post'], '/', [ProfileController::class, 'update']);
         Route::post('/change-password', [ProfileController::class, 'changePassword']);
 
         // Skills

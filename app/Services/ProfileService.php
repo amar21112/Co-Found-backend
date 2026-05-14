@@ -4,19 +4,50 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class ProfileService
 {
+    public function __construct(
+        private readonly ProfilePictureService $pictureService,
+    ) {}
+
+    // =========================================================================
+    // Profile Update
+    // =========================================================================
+
     /**
      * Update the authenticated user's profile fields.
+     *
+     * When a profile_picture file is present it is stored via
+     * ProfilePictureService and the old file is deleted. The stored
+     * relative path is written to profile_picture_url.
+     *
+     * @param array $data  Validated data from UpdateProfileRequest.
+     *                     May contain 'profile_picture' as an UploadedFile.
      */
     public function updateProfile(User $user, array $data): User
     {
+        // ── Handle profile picture upload ─────────────────────────────────────
+        if (isset($data['profile_picture']) && $data['profile_picture'] instanceof UploadedFile) {
+            $this->pictureService->delete($user->profile_picture_url);
+
+            $data['profile_picture_url'] = $this->pictureService->store($data['profile_picture']);
+        }
+
+        // Remove the file key — the User model only knows profile_picture_url
+        unset($data['profile_picture']);
+
         $user->update($data);
+
         return $user->fresh();
     }
+
+    // =========================================================================
+    // Password Change
+    // =========================================================================
 
     /**
      * Change the user's password after verifying the current one.
@@ -33,6 +64,10 @@ class ProfileService
 
         $user->update(['password' => Hash::make($newPassword)]);
     }
+
+    // =========================================================================
+    // Public Profile
+    // =========================================================================
 
     /**
      * Return a public profile view.
@@ -53,6 +88,10 @@ class ProfileService
         return $target;
     }
 
+    // =========================================================================
+    // User Search
+    // =========================================================================
+
     /**
      * Search / browse public users.
      *
@@ -66,7 +105,6 @@ class ProfileService
             ->where('account_status', 'active')
             ->whereNull('deleted_at');
 
-        // Full-text search across name, username, and location
         if (! empty($filters['search'])) {
             $term = '%' . $filters['search'] . '%';
             $query->where(function ($q) use ($term) {
@@ -76,12 +114,10 @@ class ProfileService
             });
         }
 
-        // Filter by location (city / country substring)
         if (! empty($filters['location'])) {
             $query->where('location', 'LIKE', '%' . $filters['location'] . '%');
         }
 
-        // Filter by identity verification status
         if (isset($filters['identity_verified']) && $filters['identity_verified'] !== '') {
             $query->where(
                 'identity_verified',
@@ -89,7 +125,6 @@ class ProfileService
             );
         }
 
-        // Sorting — whitelist allowed columns
         $allowed = ['full_name', 'last_login_at', 'created_at'];
         $sortBy  = in_array($filters['sort_by'] ?? '', $allowed) ? $filters['sort_by'] : 'created_at';
         $sortDir = ($filters['sort_dir'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
