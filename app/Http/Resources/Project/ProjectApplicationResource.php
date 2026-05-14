@@ -4,14 +4,14 @@ namespace App\Http\Resources\Project;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-
+use App\Http\Resources\Project\ProjectSimpleResource;
 class ProjectApplicationResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
         return [
             'id'            => $this->id,
-            'project_id'    => $this->project_id,
+            'project' => new ProjectSimpleResource($this->whenLoaded('project')),
             'applicant'     => [
                 'id'                  => $this->applicant->id,
                 'username'            => $this->applicant->username,
