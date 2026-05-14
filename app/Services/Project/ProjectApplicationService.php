@@ -17,6 +17,7 @@ use App\Repositories\Contracts\ProjectTeamRepositoryInterface;
 use App\Traits\SendsNotifications;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class ProjectApplicationService
 {
