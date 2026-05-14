@@ -3,6 +3,7 @@
 namespace App\Repositories\Eloquent;
 
 use App\Models\Project;
+use App\Models\User;
 use App\Repositories\Contracts\ProjectRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -96,5 +97,70 @@ class ProjectRepository implements ProjectRepositoryInterface
         }
 
         return $query->exists();
+    }
+
+    public function paginateForUser(User $user, array $filters, int $perPage): LengthAwarePaginator
+    {
+        $query = Project::with(['owner', 'skills', 'roles', 'milestones']);
+
+        // ── Role scope ──────────────────────────────────────────────────────────
+        $role = $filters['role'] ?? null;
+
+        if ($role === 'owner') {
+            $query->where('owner_id', $user->id);
+        } elseif ($role === 'member') {
+            $query->whereHas('teamMembers', fn ($tm) =>
+                $tm->where('user_id', $user->id)->where('is_active', true)
+            )->where('owner_id', '!=', $user->id);
+        } elseif ($role === 'admin') {
+            // any project the user can see (owner or team)
+            $query->where(function ($q) use ($user) {
+                $q->where('owner_id', $user->id)
+                  ->orWhereHas('teamMembers', fn ($tm) =>
+                      $tm->where('user_id', $user->id)
+                  );
+            });
+        } else {
+            // Default: both owner and active member
+            $query->where(function ($q) use ($user) {
+                $q->where('owner_id', $user->id)
+                  ->orWhereHas('teamMembers', fn ($tm) =>
+                      $tm->where('user_id', $user->id)->where('is_active', true)
+                  );
+            });
+        }
+
+        // ── Common filters ───────────────────────────────────────────────────────
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['category'])) {
+            $query->where('category', $filters['category']);
+        }
+
+        if (!empty($filters['skill'])) {
+            $query->whereHas('skills', fn ($q) =>
+                $q->where('skill_name', 'like', "%{$filters['skill']}%")
+            );
+        }
+
+        if (!empty($filters['search'])) {
+            $term = $filters['search'];
+            $query->where(fn ($q) =>
+                $q->where('title', 'like', "%{$term}%")
+                  ->orWhere('short_description', 'like', "%{$term}%")
+            );
+        }
+
+        if (isset($filters['accepting_applications'])) {
+            $query->where('is_accepting_applications', (bool) $filters['accepting_applications']);
+        }
+
+        $sort = in_array($filters['sort'] ?? '', ['view_count', 'application_count'])
+            ? $filters['sort']
+            : 'created_at';
+
+        return $query->orderByDesc($sort)->paginate($perPage);
     }
 }
