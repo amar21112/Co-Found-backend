@@ -44,6 +44,8 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['auth:sanctum', 'no.guest', 'verified'])->group(function () {
 
         // Projects CRUD
+        Route::get('my-projects', [ProjectController::class, 'myProjects']);
+
         Route::post('projects',             [ProjectController::class, 'store']);
         Route::put('projects/{project}',    [ProjectController::class, 'update']);
         Route::delete('projects/{project}', [ProjectController::class, 'destroy']);

@@ -28,6 +28,11 @@ class ProjectService
         return $this->projectRepo->paginate($filters, $perPage);
     }
 
+    public function myProjects(User $user, array $filters, int $perPage): LengthAwarePaginator
+    {
+        return $this->projectRepo->paginateForUser($user, $filters, $perPage);
+    }
+
     public function show(string $id): Project
     {
         $project = $this->projectRepo->findById($id);

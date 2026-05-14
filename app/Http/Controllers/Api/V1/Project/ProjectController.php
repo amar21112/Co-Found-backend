@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Project;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Project\CreateProjectRequest;
 use App\Http\Requests\Project\ListProjectsRequest;
+use App\Http\Requests\Project\MyProjectsRequest;
 use App\Http\Requests\Project\UpdateProjectRequest;
 use App\Http\Resources\Project\ProjectBriefResource;
 use App\Http\Resources\Project\ProjectResource;
@@ -32,6 +33,21 @@ class ProjectController extends Controller
             filters: $request->validated(),
             perPage: (int) $request->input('per_page', 15),
         );
+
+        return ProjectBriefResource::collection($projects);
+    }
+
+    /**
+     * GET /api/v1/my-projects
+     * List projects where the authenticated user is owner or active member,
+     * with optional filters: role, status, category, skill, search,
+     * accepting_applications, sort, per_page.
+     */
+    public function myProjects(MyProjectsRequest $request): AnonymousResourceCollection
+    {
+        $filters  = $request->validated();
+        $perPage  = (int) ($filters['per_page'] ?? 15);
+        $projects = $this->service->myProjects($request->user(), $filters, $perPage);
 
         return ProjectBriefResource::collection($projects);
     }

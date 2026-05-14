@@ -5,6 +5,7 @@ namespace App\Repositories\Contracts;
 use App\Models\Project;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use App\Models\User;
 
 interface ProjectRepositoryInterface
 {
@@ -23,4 +24,6 @@ interface ProjectRepositoryInterface
     public function incrementViewCount(Project $project): void;
 
     public function existsBySlug(string $slug, ?string $excludeId = null): bool;
+
+    public function paginateForUser(User $user, array $filters, int $perPage): LengthAwarePaginator;
 }
