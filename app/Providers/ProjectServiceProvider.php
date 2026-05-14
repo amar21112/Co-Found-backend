@@ -78,6 +78,7 @@ class ProjectServiceProvider extends ServiceProvider
             return new ProjectApplicationService(
                 $app->make(ProjectApplicationRepositoryInterface::class),
                 $app->make(ProjectRoleRepositoryInterface::class),
+                $app->make(ProjectTeamRepositoryInterface::class),
             );
         });
     }

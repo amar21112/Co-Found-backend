@@ -13,6 +13,7 @@ use App\Models\ProjectApplication;
 use App\Models\User;
 use App\Repositories\Contracts\ProjectApplicationRepositoryInterface;
 use App\Repositories\Contracts\ProjectRoleRepositoryInterface;
+use App\Repositories\Contracts\ProjectTeamRepositoryInterface;
 use App\Traits\SendsNotifications;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
@@ -22,8 +23,10 @@ class ProjectApplicationService
     use SendsNotifications;
     public function __construct(
         private readonly ProjectApplicationRepositoryInterface $applicationRepo,
-        private readonly ProjectRoleRepositoryInterface        $roleRepo,
-    ) {}
+        private readonly ProjectRoleRepositoryInterface $roleRepo,
+        private readonly ProjectTeamRepositoryInterface $teamRepo,
+    ) {
+    }
 
     public function listForProject(Project $project, array $filters, int $perPage): LengthAwarePaginator
     {
@@ -72,10 +75,10 @@ class ProjectApplicationService
         $skills = $data['skills'] ?? [];
         unset($data['skills']);
 
-        $data['project_id']   = $project->id;
+        $data['project_id'] = $project->id;
         $data['applicant_id'] = $applicant->id;
-        $data['status']       = ApplicationStatus::Pending->value;
-        $data['applied_at']   = now();
+        $data['status'] = ApplicationStatus::Pending->value;
+        $data['applied_at'] = now();
 
         $application = $this->applicationRepo->create($data);
 
@@ -90,46 +93,103 @@ class ProjectApplicationService
 
         // Notify the project owner that a new application arrived
         $this->notify(
-            userId:   $project->owner_id,
-            type:     'new_application',
-            title:    'New application received',
-            body:     "{$applicant->full_name} applied to \u201c{$project->title}\u201d.",
-            data:     ['project_id' => $project->id, 'application_id' => $fresh->id],
+            userId: $project->owner_id,
+            type: 'new_application',
+            title: 'New application received',
+            body: "{$applicant->full_name} applied to \u201c{$project->title}\u201d.",
+            data: ['project_id' => $project->id, 'application_id' => $fresh->id],
             priority: 'high',
         );
 
         return $fresh;
     }
 
-    public function review(Project $project, string $applicationId, string $newStatus, User $reviewer): ProjectApplication
-    {
+    public function review(
+        Project $project,
+        string $applicationId,
+        string $newStatus,
+        User $reviewer,
+    ): ProjectApplication {
         $application = $this->resolveApplication($project, $applicationId);
 
         if (!ApplicationStatus::from($application->status)->isReviewable()) {
             throw new ProjectException('This application cannot be reviewed in its current state.', 422);
         }
 
+
+        if ($newStatus === ApplicationStatus::Accepted->value) {
+            if ($this->teamRepo->isMember($project->id, $application->applicant_id)) {
+                throw new ProjectException(
+                    'This user is already a team member. The application cannot be accepted.',
+                    409
+                );
+            }
+
+            DB::transaction(function () use ($project, $application, $reviewer) {
+
+                $this->applicationRepo->update($application, [
+                    'status' => ApplicationStatus::Accepted->value,
+                    'reviewed_by' => $reviewer->id,
+                    'reviewed_at' => now(),
+                ]);
+
+
+                $position = $this->resolvePosition($application);
+
+                $this->teamRepo->addMember($project->id, $application->applicant_id, [
+                    'role_id' => $application->role_id,      // null when proposed_role was used
+                    'position' => $position,
+                    'permissions' => 'member',
+                ]);
+
+                // 4. Increment role positions_filled if a formal role was targeted
+                if ($application->role_id) {
+                    $role = $this->roleRepo->findById($application->role_id);
+                    if ($role) {
+                        $role->increment('positions_filled');
+                    }
+                }
+
+                // 5. Increment project team size
+                $project->increment('current_team_size');
+            });
+
+            // Notify applicant of acceptance (outside transaction — non-critical)
+            $this->notify(
+                userId: $application->applicant_id,
+                type: 'application_accepted',
+                title: '🎉 Your application was accepted!',
+                body: "You've been added to {$project->title}" . ($application->role ? " as {$application->role->role_name}" : '') . '.',
+                data: [
+                    'project_id' => $project->id,
+                    'application_id' => $application->id,
+                ],
+                priority: 'high',
+            );
+
+            return $this->applicationRepo->findById($application->id);
+        }
+
+        // ── Rejection / reviewing path ─────────────────────────────────────────
         $updated = $this->applicationRepo->update($application, [
-            'status'      => $newStatus,
+            'status' => $newStatus,
             'reviewed_by' => $reviewer->id,
             'reviewed_at' => now(),
         ]);
 
-        // Notify the applicant of the decision
-        $status  = ApplicationStatus::from($newStatus);
-        $project = $application->project;
-        $this->notify(
-            userId:   $application->applicant_id,
-            type:     "application_{$newStatus}",
-            title:    $status === ApplicationStatus::Accepted
-                          ? '🎉 Application accepted!'
-                          : 'Application update',
-            body:     $status === ApplicationStatus::Accepted
-                          ? "Congratulations! You\'ve been accepted to \u201c{$project?->title}\u201d."
-                          : "Your application to \u201c{$project?->title}\u201d was {$newStatus}.",
-            data:     ['project_id' => $application->project_id, 'application_id' => $application->id],
-            priority: $status === ApplicationStatus::Accepted ? 'high' : 'normal',
-        );
+        if ($newStatus === ApplicationStatus::Rejected->value) {
+            $this->notify(
+                userId: $application->applicant_id,
+                type: 'application_rejected',
+                title: 'Application update for ' . $project->title,
+                body: 'Your application was not selected this time.',
+                data: [
+                    'project_id' => $project->id,
+                    'application_id' => $application->id,
+                ],
+                priority: 'normal',
+            );
+        }
 
         return $updated;
     }
@@ -162,5 +222,18 @@ class ProjectApplicationService
         }
 
         return $application;
+    }
+
+    private function resolvePosition(ProjectApplication $application): string
+    {
+        if ($application->role_id && $application->role) {
+            return $application->role->role_name;
+        }
+
+        if ($application->proposed_role) {
+            return $application->proposed_role;
+        }
+
+        return 'Team Member';
     }
 }
