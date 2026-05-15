@@ -19,7 +19,16 @@ class MatchRepository implements MatchRepositoryInterface
     public function paginate(User $user, array $filters, int $perPage): LengthAwarePaginator
     {
         $query = MatchModel::where('user_id', $user->id)
-            ->with(['matchedUser', 'matchedProject']);
+            ->with(['matchedUser', 'matchedProject'])
+            ->where(function ($q) {
+                $q->where('match_type', \App\Enums\MatchType::Collaborator->value)
+                    ->orWhere(function ($q2) {
+                        $q2->where('match_type', \App\Enums\MatchType::Project->value)
+                            ->whereHas('matchedProject', function ($q3) {
+                                $q3->where('visibility', 'public');
+                            });
+                    });
+            });
 
         if (! empty($filters['match_type'])) {
             $query->where('match_type', $filters['match_type']);
