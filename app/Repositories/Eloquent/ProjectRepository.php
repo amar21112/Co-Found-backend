@@ -14,31 +14,34 @@ class ProjectRepository implements ProjectRepositoryInterface
     public function paginate(User $user, array $filters, int $perPage): LengthAwarePaginator
     {
         $query = Project::query()->with(['owner', 'skills', 'roles']);
-        if($filters['is_user_participant']){
-                $role = $filters['role'] ?? null;
+        if(!empty($filters['is_user_participant'])){
 
-            if ($role === 'owner') {
-                $query->where('owner_id', $user->id);
-            } elseif ($role === 'member') {
-                $query->whereHas('teamMembers', fn ($tm) =>
-                    $tm->where('user_id', $user->id)->where('is_active', true)
-                )->where('owner_id', '!=', $user->id);
-            } elseif ($role === 'admin') {
-                // any project the user can see (owner or team)
-                $query->where(function ($q) use ($user) {
-                    $q->where('owner_id', $user->id)
-                    ->orWhereHas('teamMembers', fn ($tm) =>
-                        $tm->where('user_id', $user->id)
-                    );
-                });
-            } else {
-                // Default: both owner and active member
-                $query->where(function ($q) use ($user) {
-                    $q->where('owner_id', $user->id)
-                    ->orWhereHas('teamMembers', fn ($tm) =>
+            if($filters['is_user_participant']){
+                    $role = $filters['role'] ?? null;
+
+                if ($role === 'owner') {
+                    $query->where('owner_id', $user->id);
+                } elseif ($role === 'member') {
+                    $query->whereHas('teamMembers', fn ($tm) =>
                         $tm->where('user_id', $user->id)->where('is_active', true)
-                    );
-                });
+                    )->where('owner_id', '!=', $user->id);
+                } elseif ($role === 'admin') {
+                    // any project the user can see (owner or team)
+                    $query->where(function ($q) use ($user) {
+                        $q->where('owner_id', $user->id)
+                        ->orWhereHas('teamMembers', fn ($tm) =>
+                            $tm->where('user_id', $user->id)
+                        );
+                    });
+                } else {
+                    // Default: both owner and active member
+                    $query->where(function ($q) use ($user) {
+                        $q->where('owner_id', $user->id)
+                        ->orWhereHas('teamMembers', fn ($tm) =>
+                            $tm->where('user_id', $user->id)->where('is_active', true)
+                        );
+                    });
+                }
             }
         }
 
