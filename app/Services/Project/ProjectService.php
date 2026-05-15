@@ -41,9 +41,12 @@ class ProjectService
             throw new ProjectNotFoundException();
         }
 
-        $this->projectRepo->incrementViewCount($project);
-
         return $project;
+    }
+
+    public function incrementViewCount(Project $project): void
+    {
+        $this->projectRepo->incrementViewCount($project);
     }
 
     public function create(User $owner, array $data): Project

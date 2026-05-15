@@ -29,7 +29,7 @@ class ProjectController extends Controller
      */
     public function index(ListProjectsRequest $request): AnonymousResourceCollection
     {
-        if($request->validated('is_user_participant') ){
+        if($request->validated('is_user_participant')){
             $user = $request->user();
            if($user->role == 'guest' || !$user->is_active){
               $request->merge([
@@ -88,7 +88,8 @@ class ProjectController extends Controller
     {
         $project = $this->service->show($id);
         $this->authorize('view', $project);
-
+        
+        $this->service->incrementViewCount($project);
         return response()->json([
             'data' => new ProjectResource($project),
         ]);
