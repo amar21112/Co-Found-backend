@@ -43,6 +43,8 @@ class ProjectRepository implements ProjectRepositoryInterface
                     });
                 }
             }
+        } else{
+            $query->where('visibility', 'public');
         }
 
         if (!empty($filters['status'])) {
@@ -72,9 +74,7 @@ class ProjectRepository implements ProjectRepositoryInterface
             $query->where('is_accepting_applications', $filter_for );
         }
 
-        // Only public projects for the public listing
-        $query->where('visibility', 'public');
-
+    
         $sort = in_array($filters['sort'] ?? '', ['view_count', 'application_count'])
             ? $filters['sort']
             : 'created_at';
