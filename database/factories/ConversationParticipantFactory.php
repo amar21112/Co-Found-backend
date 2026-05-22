@@ -7,6 +7,9 @@ use App\Models\ConversationParticipant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<ConversationParticipant>
+ */
 class ConversationParticipantFactory extends Factory
 {
     protected $model = ConversationParticipant::class;

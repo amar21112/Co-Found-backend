@@ -6,6 +6,9 @@ use App\Models\UserRestriction;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<UserRestriction>
+ */
 class UserRestrictionFactory extends Factory
 {
     protected $model = UserRestriction::class;
@@ -13,9 +16,9 @@ class UserRestrictionFactory extends Factory
     public function definition(): array
     {
         $durationHours = $this->faker->randomElement([1, 6, 24, 72, 168, 720, null]);
-        $startsAt      = $this->faker->dateTimeBetween('-30 days', 'now');
-        $expiresAt     = $durationHours ? (clone $startsAt)->modify("+{$durationHours} hours") : null;
-        $isActive      = $expiresAt ? $expiresAt > now() : true;
+        $startsAt      = $this->faker->dateTimeBetween('-30 days');
+        $expiresAt     = $durationHours ? (clone $startsAt)->modify("+$durationHours hours") : null;
+        $isActive      = !$expiresAt || $expiresAt > now();
 
         return [
             'id'               => $this->faker->uuid(),
@@ -27,8 +30,8 @@ class UserRestrictionFactory extends Factory
             'starts_at'        => $startsAt,
             'expires_at'       => $expiresAt,
             'is_active'        => $isActive,
-            'lifted_by'        => !$isActive && $this->faker->boolean(50) ? User::factory()->admin() : null,
-            'lifted_at'        => !$isActive && $this->faker->boolean(50) ? $this->faker->dateTimeBetween($startsAt, 'now') : null,
+            'lifted_by'        => !$isActive && $this->faker->boolean() ? User::factory()->admin() : null,
+            'lifted_at'        => !$isActive && $this->faker->boolean() ? $this->faker->dateTimeBetween($startsAt) : null,
         ];
     }
 }

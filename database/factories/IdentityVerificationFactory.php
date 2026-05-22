@@ -6,6 +6,9 @@ use App\Models\IdentityVerification;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<IdentityVerification>
+ */
 class IdentityVerificationFactory extends Factory
 {
     protected $model = IdentityVerification::class;
@@ -30,7 +33,7 @@ class IdentityVerificationFactory extends Factory
             'liveness_check_data'   => json_encode(['score' => $this->faker->randomFloat(2, 0.85, 1.0), 'checks' => ['face_detected', 'blink_detected']]),
             'verification_status'   => 'pending',
             'rejection_reason'      => null,
-            'created_at'          => $this->faker->dateTimeBetween('-30 days', 'now'),
+            'created_at'          => $this->faker->dateTimeBetween('-30 days'),
         ];
     }
 

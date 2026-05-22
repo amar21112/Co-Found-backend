@@ -6,6 +6,9 @@ use App\Models\UserConnection;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<UserConnection>
+ */
 class UserConnectionFactory extends Factory
 {
     protected $model = UserConnection::class;

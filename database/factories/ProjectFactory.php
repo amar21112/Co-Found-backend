@@ -7,6 +7,9 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
+/**
+ * @extends Factory<Project>
+ */
 class ProjectFactory extends Factory
 {
     protected $model = Project::class;
@@ -28,7 +31,7 @@ class ProjectFactory extends Factory
             'id'                       => $this->faker->uuid(),
             'owner_id'                 => User::factory(),
             'title'                    => $title,
-            'slug'                     => Str::slug($title) . '-' . $this->faker->numerify('###'),
+            'slug'                     => Str::slug($title) . '-' . $this->faker->numerify(),
             'short_description'        => $this->faker->sentence(12),
             'full_description'         => $this->faker->paragraphs(4, true),
             'category'                 => $this->faker->randomElement(self::$categories),
@@ -39,12 +42,12 @@ class ProjectFactory extends Factory
             'current_team_size'        => $this->faker->numberBetween(1, $minSize),
             'start_date'               => $this->faker->dateTimeBetween('-6 months', '+1 month')->format('Y-m-d'),
             'target_completion_date'   => $this->faker->dateTimeBetween('+3 months', '+2 years')->format('Y-m-d'),
-            'actual_completion_date'   => $status === 'completed' ? $this->faker->dateTimeBetween('-3 months', 'now')->format('Y-m-d') : null,
+            'actual_completion_date'   => $status === 'completed' ? $this->faker->dateTimeBetween('-3 months')->format('Y-m-d') : null,
             'is_accepting_applications'=> $status === 'active' || $status === 'planning',
             'application_deadline'     => $this->faker->dateTimeBetween('+1 month', '+6 months')->format('Y-m-d'),
             'view_count'               => $this->faker->numberBetween(0, 5000),
             'application_count'        => $this->faker->numberBetween(0, 100),
-            'published_at'             => $status !== 'planning' ? $this->faker->dateTimeBetween('-6 months', 'now') : null,
+            'published_at'             => $status !== 'planning' ? $this->faker->dateTimeBetween('-6 months') : null,
             'archived_at'              => null,
         ];
     }
@@ -63,7 +66,7 @@ class ProjectFactory extends Factory
         return $this->state(fn() => [
             'status'                    => 'completed',
             'is_accepting_applications' => false,
-            'actual_completion_date'    => $this->faker->dateTimeBetween('-3 months', 'now')->format('Y-m-d'),
+            'actual_completion_date'    => $this->faker->dateTimeBetween('-3 months')->format('Y-m-d'),
         ]);
     }
 }

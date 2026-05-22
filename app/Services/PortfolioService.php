@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\PortfolioItem;
 use App\Models\PortfolioSkill;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class PortfolioService

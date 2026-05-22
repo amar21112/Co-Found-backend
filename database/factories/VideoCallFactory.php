@@ -9,6 +9,9 @@ use App\Models\VideoCall;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
+/**
+ * @extends Factory<VideoCall>
+ */
 class VideoCallFactory extends Factory
 {
     protected $model = VideoCall::class;

@@ -7,6 +7,12 @@ use App\Models\User;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<CollaborationRating>
+ */
+/**
+ * @extends Factory<CollaborationRating>
+ */
 class CollaborationRatingFactory extends Factory
 {
     protected $model = CollaborationRating::class;

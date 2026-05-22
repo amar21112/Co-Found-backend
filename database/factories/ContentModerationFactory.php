@@ -6,6 +6,9 @@ use App\Models\ContentModeration;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<ContentModeration>
+ */
 class ContentModerationFactory extends Factory
 {
     protected $model = ContentModeration::class;

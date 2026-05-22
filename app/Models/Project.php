@@ -2,12 +2,94 @@
 
 namespace App\Models;
 
+use Database\Factories\ProjectFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
+/**
+ * @property string $id
+ * @property string $owner_id
+ * @property string $title
+ * @property string $slug
+ * @property string|null $short_description
+ * @property string|null $full_description
+ * @property string|null $category
+ * @property string $status
+ * @property string $visibility
+ * @property int|null $team_size_min
+ * @property int|null $team_size_max
+ * @property int $current_team_size
+ * @property Carbon|null $start_date
+ * @property Carbon|null $target_completion_date
+ * @property Carbon|null $actual_completion_date
+ * @property bool $is_accepting_applications
+ * @property Carbon|null $application_deadline
+ * @property int $view_count
+ * @property int $application_count
+ * @property Carbon|null $published_at
+ * @property Carbon|null $archived_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ *
+ * @method static Builder|Project create(array $attributes = [])
+ * @method static Builder|Project find($id, $columns = ['*'])
+ * @method static Builder|Project findOrFail($id, $columns = ['*'])
+ * @method static Builder|Project first($columns = ['*'])
+ * @method static Builder|Project firstOrCreate(array $attributes = [], array $values = [])
+ * @method static Builder|Project firstOrFail($columns = ['*'])
+ * @method static Builder|Project newModelQuery()
+ * @method static Builder|Project newQuery()
+ * @method static Builder|Project query()
+ * @method static Builder|Project where($column, $operatorOrValue = null, $value = null, $boolean = 'and')
+ * @method static Builder|Project whereIn($column, $values, $boolean = 'and', $not = false)
+ * @method static Builder|Project with($relations, $callback = null)
+ *
+ * @method static Builder|Project whereId($value)
+ * @method static Builder|Project whereOwnerId($value)
+ * @method static Builder|Project whereTitle($value)
+ * @method static Builder|Project whereSlug($value)
+ * @method static Builder|Project whereShortDescription($value)
+ * @method static Builder|Project whereFullDescription($value)
+ * @method static Builder|Project whereCategory($value)
+ * @method static Builder|Project whereStatus($value)
+ * @method static Builder|Project whereVisibility($value)
+ * @method static Builder|Project whereTeamSizeMin($value)
+ * @method static Builder|Project whereTeamSizeMax($value)
+ * @method static Builder|Project whereCurrentTeamSize($value)
+ * @method static Builder|Project whereStartDate($value)
+ * @method static Builder|Project whereTargetCompletionDate($value)
+ * @method static Builder|Project whereActualCompletionDate($value)
+ * @method static Builder|Project whereIsAcceptingApplications($value)
+ * @method static Builder|Project whereApplicationDeadline($value)
+ * @method static Builder|Project whereViewCount($value)
+ * @method static Builder|Project whereApplicationCount($value)
+ * @method static Builder|Project wherePublishedAt($value)
+ * @method static Builder|Project whereArchivedAt($value)
+ * @method static Builder|Project whereCreatedAt($value)
+ * @method static Builder|Project whereUpdatedAt($value)
+ *
+ * @property-read User $owner
+ * @property-read Collection|ProjectSkill[] $skills
+ * @property-read Collection|ProjectRole[] $roles
+ * @property-read Collection|ProjectMilestone[] $milestones
+ * @property-read Collection|ProjectTeamMember[] $teamMembers
+ * @property-read Collection|ProjectTeamMember[] $activeTeamMembers
+ * @property-read Collection|ProjectApplication[] $applications
+ * @property-read Collection|ProjectApplication[] $pendingApplications
+ * @property-read Collection|Conversation[] $conversations
+ * @property-read Collection|CollaborationInvitation[] $invitations
+ * @property-read Collection|MatchModel[] $matches
+ * @property-read Collection|CollaborationRating[] $ratings
+ * @property-read Collection|VideoCall[] $videoCalls
+ *
+ * @method static ProjectFactory factory($count = null, $state = [])
+ */
 class Project extends Model
 {
     use HasFactory, HasUuids;

@@ -6,6 +6,9 @@ use App\Models\User;
 use App\Models\VerificationAttempt;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<VerificationAttempt>
+ */
 class VerificationAttemptFactory extends Factory
 {
     protected $model = VerificationAttempt::class;

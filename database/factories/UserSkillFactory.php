@@ -6,6 +6,9 @@ use App\Models\UserSkill;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<UserSkill>
+ */
 class UserSkillFactory extends Factory
 {
     protected $model = UserSkill::class;
