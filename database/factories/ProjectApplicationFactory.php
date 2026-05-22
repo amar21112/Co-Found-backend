@@ -7,6 +7,9 @@ use App\Models\Project;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<ProjectApplication>
+ */
 class ProjectApplicationFactory extends Factory
 {
     protected $model = ProjectApplication::class;
@@ -26,8 +29,8 @@ class ProjectApplicationFactory extends Factory
             'status'        => $status,
             'match_score'   => $this->faker->randomFloat(2, 0.30, 1.00),
             'reviewed_by'   => in_array($status, ['accepted', 'rejected']) ? User::factory() : null,
-            'reviewed_at'   => in_array($status, ['accepted', 'rejected']) ? $this->faker->dateTimeBetween('-14 days', 'now') : null,
-            'applied_at'    => $this->faker->dateTimeBetween('-30 days', 'now'),
+            'reviewed_at'   => in_array($status, ['accepted', 'rejected']) ? $this->faker->dateTimeBetween('-14 days') : null,
+            'applied_at'    => $this->faker->dateTimeBetween('-30 days'),
         ];
     }
 

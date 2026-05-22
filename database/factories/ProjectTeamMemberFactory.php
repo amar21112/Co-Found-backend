@@ -7,6 +7,9 @@ use App\Models\Project;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<ProjectTeamMember>
+ */
 class ProjectTeamMemberFactory extends Factory
 {
     protected $model = ProjectTeamMember::class;
@@ -20,7 +23,7 @@ class ProjectTeamMemberFactory extends Factory
             'role_id'     => null,
             'position'    => $this->faker->randomElement(['Lead Developer', 'Designer', 'Backend Engineer', 'Frontend Developer', 'DevOps', 'Product Manager']),
             'permissions' => $this->faker->randomElement(['member', 'admin', 'owner']),
-            'joined_at'   => $this->faker->dateTimeBetween('-6 months', 'now'),
+            'joined_at'   => $this->faker->dateTimeBetween('-6 months'),
             'left_at'     => null,
             'is_active'   => true,
         ];
@@ -30,7 +33,7 @@ class ProjectTeamMemberFactory extends Factory
     {
         return $this->state(fn() => [
             'is_active' => false,
-            'left_at'   => $this->faker->dateTimeBetween('-3 months', 'now'),
+            'left_at'   => $this->faker->dateTimeBetween('-3 months'),
         ]);
     }
 }

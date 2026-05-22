@@ -8,6 +8,9 @@ use App\Models\Project;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<MatchModel>
+ */
 class MatchFactory extends Factory
 {
     protected $model = MatchModel::class;

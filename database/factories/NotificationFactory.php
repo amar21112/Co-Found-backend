@@ -6,6 +6,9 @@ use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<Notification>
+ */
 class NotificationFactory extends Factory
 {
     protected $model = Notification::class;
@@ -30,8 +33,8 @@ class NotificationFactory extends Factory
             'data'         => json_encode(['related_id' => $this->faker->uuid()]),
             'priority'     => $this->faker->randomElement(['low', 'normal', 'high']),
             'read'         => $read,
-            'read_at'      => $read ? $this->faker->dateTimeBetween('-7 days', 'now') : null,
-            'delivered_at' => $this->faker->dateTimeBetween('-14 days', 'now'),
+            'read_at'      => $read ? $this->faker->dateTimeBetween('-7 days') : null,
+            'delivered_at' => $this->faker->dateTimeBetween('-14 days'),
         ];
     }
 

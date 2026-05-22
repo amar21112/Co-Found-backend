@@ -6,6 +6,9 @@ use App\Models\AdminAction;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<AdminAction>
+ */
 class AdminActionFactory extends Factory
 {
     protected $model = AdminAction::class;

@@ -6,6 +6,9 @@ use App\Models\Project;
 use App\Models\ProjectSkill;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<ProjectSkill>
+ */
 class ProjectSkillFactory extends Factory
 {
     protected $model = ProjectSkill::class;

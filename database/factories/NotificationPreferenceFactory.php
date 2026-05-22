@@ -6,6 +6,9 @@ use App\Models\NotificationPreference;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<NotificationPreference>
+ */
 class NotificationPreferenceFactory extends Factory
 {
     protected $model = NotificationPreference::class;

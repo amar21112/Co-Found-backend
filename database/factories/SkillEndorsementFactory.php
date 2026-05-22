@@ -7,6 +7,9 @@ use App\Models\UserSkill;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<SkillEndorsement>
+ */
 class SkillEndorsementFactory extends Factory
 {
     protected $model = SkillEndorsement::class;

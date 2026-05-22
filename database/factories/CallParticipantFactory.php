@@ -10,6 +10,9 @@ use DateTime;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<CallParticipant>
+ */
 class CallParticipantFactory extends Factory
 {
     protected $model = CallParticipant::class;

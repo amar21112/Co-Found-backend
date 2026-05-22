@@ -7,6 +7,9 @@ use App\Models\IdentityVerification;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
+/**
+ * @extends Factory<VerificationReview>
+ */
 class VerificationReviewFactory extends Factory
 {
     protected $model = VerificationReview::class;
@@ -24,7 +27,7 @@ class VerificationReviewFactory extends Factory
             'rejection_reason_category'=> $action === 'rejected'
                 ? $this->faker->randomElement(['forgery', 'expired', 'unclear', 'mismatch', 'other'])
                 : null,
-            'reviewed_at'              => $this->faker->dateTimeBetween('-7 days', 'now'),
+            'reviewed_at'              => $this->faker->dateTimeBetween('-7 days'),
             'automated_checks_passed'  => true,
             'automated_checks_data'    => json_encode([
                 'ocr_passed'    => true,

@@ -6,7 +6,11 @@ use App\Models\Report;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
+/**
+ * @extends Factory<Report>
+ */
 class ReportFactory extends Factory
 {
     protected $model = Report::class;
@@ -30,7 +34,7 @@ class ReportFactory extends Factory
             'resolved_by'           => $status === 'resolved' ? User::factory()->moderator() : null,
             'resolution_action'     => $status === 'resolved' ? $this->faker->randomElement(['warning_issued', 'content_removed', 'user_suspended', 'no_action']) : null,
             'resolution_notes'      => $status === 'resolved' ? $this->faker->sentence() : null,
-            'resolved_at'           => $status === 'resolved' ? $this->faker->dateTimeBetween('-14 days', 'now') : null,
+            'resolved_at'           => $status === 'resolved' ? $this->faker->dateTimeBetween('-14 days') : null,
         ];
     }
 
@@ -60,7 +64,7 @@ class ReportFactory extends Factory
                 ->shuffle();
 
             if ($verifiedUserIds->count() < 2) {
-                throw new \RuntimeException(
+                throw new RuntimeException(
                     'withVerifiedUsers() requires at least 2 verified users. ' .
                     'Make sure IdentityVerificationSeeder ran before AdministrationSeeder.'
                 );

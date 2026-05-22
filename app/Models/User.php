@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Enums\AccountStatus;
 use App\Enums\IdentityVerificationLevel;
 use App\Enums\UserRole;
+use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -12,8 +14,126 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * @property string $id
+ * @property string $email
+ * @property string $username
+ * @property string $password
+ * @property string $full_name
+ * @property string|null $profile_picture_url
+ * @property string|null $bio
+ * @property string|null $location
+ * @property string|null $website_url
+ * @property string|null $linkedin_url
+ * @property string|null $github_url
+ * @property UserRole $role
+ * @property AccountStatus $account_status
+ * @property bool $email_verified
+ * @property bool $identity_verified
+ * @property IdentityVerificationLevel $identity_verification_level
+ * @property string|null $email_verification_token
+ * @property Carbon|null $email_verification_expires
+ * @property Carbon|null $last_login_at
+ * @property string|null $last_login_ip
+ * @property int $login_attempts
+ * @property Carbon|null $locked_until
+ * @property Carbon|null $deleted_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ *
+ * @method static Builder|User create(array $attributes = [])
+ * @method static Builder|User find($id, $columns = ['*'])
+ * @method static Builder|User findOrFail($id, $columns = ['*'])
+ * @method static Builder|User first($columns = ['*'])
+ * @method static Builder|User firstOrCreate(array $attributes = [], array $values = [])
+ * @method static Builder|User firstOrFail($columns = ['*'])
+ * @method static Builder|User newModelQuery()
+ * @method static Builder|User newQuery()
+ * @method static Builder|User query()
+ * @method static Builder|User where($column, $operatorOrValue = null, $value = null, $boolean = 'and')
+ * @method static Builder|User whereIn($column, $values, $boolean = 'and', $not = false)
+ * @method static Builder|User with($relations, $callback = null)
+ * @method static Builder|User withTrashed()
+ * @method static Builder|User onlyTrashed()
+ *
+ * @method static Builder|User whereId($value)
+ * @method static Builder|User whereEmail($value)
+ * @method static Builder|User whereUsername($value)
+ * @method static Builder|User wherePassword($value)
+ * @method static Builder|User whereFullName($value)
+ * @method static Builder|User whereProfilePictureUrl($value)
+ * @method static Builder|User whereBio($value)
+ * @method static Builder|User whereLocation($value)
+ * @method static Builder|User whereWebsiteUrl($value)
+ * @method static Builder|User whereLinkedinUrl($value)
+ * @method static Builder|User whereGithubUrl($value)
+ * @method static Builder|User whereRole($value)
+ * @method static Builder|User whereAccountStatus($value)
+ * @method static Builder|User whereEmailVerified($value)
+ * @method static Builder|User whereIdentityVerified($value)
+ * @method static Builder|User whereIdentityVerificationLevel($value)
+ * @method static Builder|User whereEmailVerificationToken($value)
+ * @method static Builder|User whereEmailVerificationExpires($value)
+ * @method static Builder|User whereLastLoginAt($value)
+ * @method static Builder|User whereLastLoginIp($value)
+ * @method static Builder|User whereLoginAttempts($value)
+ * @method static Builder|User whereLockedUntil($value)
+ * @method static Builder|User whereDeletedAt($value)
+ * @method static Builder|User whereCreatedAt($value)
+ * @method static Builder|User whereUpdatedAt($value)
+ *
+ * @property-read Collection|UserSkill[] $skills
+ * @property-read Collection|SkillEndorsement[] $endorsementsGiven
+ * @property-read Collection|PortfolioItem[] $portfolioItems
+ * @property-read Collection|Session[] $sessions
+ * @property-read Collection|PasswordReset[] $passwordResets
+ * @property-read IdentityVerification|null $identityVerification
+ * @property-read Collection|VerificationAttempt[] $verificationAttempts
+ * @property-read Collection|VerificationReview[] $verificationReviews
+ * @property-read Collection|UserRestriction[] $restrictions
+ * @property-read Collection|UserRestriction[] $activeRestrictions
+ * @property-read Collection|Project[] $ownedProjects
+ * @property-read Collection|ProjectTeamMember[] $teamMemberships
+ * @property-read Collection|ProjectApplication[] $projectApplications
+ * @property-read Collection|ProjectApplication[] $reviewedApplications
+ * @property-read Collection|UserConnection[] $sentConnectionRequests
+ * @property-read Collection|UserConnection[] $receivedConnectionRequests
+ * @property-read Collection|CollaborationInvitation[] $sentInvitations
+ * @property-read Collection|CollaborationInvitation[] $receivedInvitations
+ * @property-read Collection|MatchModel[] $matches
+ * @property-read Collection|MatchFeedback[] $matchFeedback
+ * @property-read Collection|CollaborationRating[] $ratingsGiven
+ * @property-read Collection|CollaborationRating[] $ratingsReceived
+ * @property-read Collection|Conversation[] $createdConversations
+ * @property-read Collection|ConversationParticipant[] $conversationParticipations
+ * @property-read Collection|Message[] $sentMessages
+ * @property-read Collection|MessageReadReceipt[] $messageReadReceipts
+ * @property-read Collection|MessageReaction[] $messageReactions
+ * @property-read Collection|File[] $uploadedFiles
+ * @property-read Collection|SharedFile[] $sharedFiles
+ * @property-read Collection|VideoCall[] $initiatedCalls
+ * @property-read Collection|CallParticipant[] $callParticipations
+ * @property-read Collection|Notification[] $notifications
+ * @property-read NotificationPreference|null $notificationPreferences
+ * @property-read Collection|AdminAction[] $adminActions
+ * @property-read Collection|Report[] $reportsFiled
+ * @property-read Collection|Report[] $reportsReceived
+ * @property-read Collection|Report[] $assignedReports
+ * @property-read Collection|Report[] $resolvedReports
+ * @property-read Collection|ContentModeration[] $moderatedContent
+ * @property-read Collection|UserRestriction[] $restrictionsIssued
+ * @property-read Collection|UserRestriction[] $restrictionsLifted
+ * @property-read Collection|SystemLog[] $systemLogs
+ * @property-read Collection|AnalyticsEvent[] $analyticsEvents
+ * @property-read Collection|SystemSetting[] $updatedSettings
+ * @property-read Collection|ConfigurationHistory[] $configurationChanges
+ *
+ * @method static UserFactory factory($count = null, $state = [])
+ */
 class User extends Authenticatable
 {
     use HasFactory, HasUuids, Notifiable, SoftDeletes, HasApiTokens;
@@ -125,12 +245,12 @@ class User extends Authenticatable
 
     public function isEmailVerified(): bool
     {
-        return (bool) $this->email_verified;
+        return $this->email_verified;
     }
 
     public function isIdentityVerified(): bool
     {
-        return (bool) $this->identity_verified;
+        return $this->identity_verified;
     }
 
     public function isFullyVerified(): bool
