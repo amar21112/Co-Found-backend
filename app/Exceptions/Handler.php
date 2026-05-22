@@ -20,6 +20,7 @@ use App\Exceptions\Auth\InvalidCredentialsException;
 use App\Exceptions\Auth\InvalidPasswordResetTokenException;
 use App\Exceptions\Auth\InvalidVerificationTokenException;
 use App\Exceptions\Call\CallAlreadyEndedException;
+use App\Exceptions\Call\CallFullException;
 use App\Exceptions\Call\CallNotFoundException;
 use App\Exceptions\Call\CallNotJoinableException;
 use App\Exceptions\Call\NotACallParticipantException;
@@ -87,6 +88,7 @@ class Handler extends ExceptionHandler
         // Call exceptions
         CallNotFoundException::class,
         CallAlreadyEndedException::class,
+        CallFullException::class,
         CallNotJoinableException::class,
         NotACallParticipantException::class,
         NotCallHostException::class,
@@ -221,6 +223,10 @@ class Handler extends ExceptionHandler
         );
 
         $this->renderable(fn(CallNotJoinableException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_CONFLICT)
+        );
+
+        $this->renderable(fn(CallFullException $e) =>
             $this->error($e->getMessage(), Response::HTTP_CONFLICT)
         );
 

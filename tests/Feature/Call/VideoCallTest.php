@@ -82,6 +82,17 @@ class VideoCallTest extends TestCase
 
     private function makeProjectCall(User $initiator, Project $project): VideoCall
     {
+        // In production, ProjectService::create() adds the owner to project_team_members.
+        // Replicate that here so capacity calculations are accurate in tests.
+        $this->addToProject(
+            $project,
+            $initiator,
+            [
+                'position'    => 'Founder',
+                'permissions' => 'owner',
+            ]
+        );
+
         $call = VideoCall::factory()->scheduled()->forProject($project->id)->create([
             'initiated_by' => $initiator->id,
         ]);
@@ -108,13 +119,13 @@ class VideoCallTest extends TestCase
         return $call;
     }
 
-    private function addToProject(Project $project, User $user): void
+    private function addToProject(Project $project, User $user, array $overrides = []): void
     {
-        ProjectTeamMember::factory()->create([
+        ProjectTeamMember::factory()->create(array_merge([
             'project_id' => $project->id,
             'user_id'    => $user->id,
             'is_active'  => true,
-        ]);
+        ], $overrides));
     }
 
     private function addToConversation(Conversation $conversation, User $user): void
@@ -646,8 +657,117 @@ class VideoCallTest extends TestCase
     }
 
     // =========================================================================
-    // POST /api/v1/calls/{id}/leave
+    // POST /api/v1/calls/{id}/join — capacity enforcement
     // =========================================================================
+
+    /** @test */
+    public function direct_conversation_call_is_limited_to_two_participants(): void
+    {
+        $initiator    = $this->makeUser();
+        $member       = $this->makeUser();
+        $outsider     = $this->makeUser();
+        $conversation = Conversation::factory()->create(['conversation_type' => 'direct']);
+        $this->addToConversation($conversation, $initiator);
+        $this->addToConversation($conversation, $member);
+
+        $call = $this->makeConversationCall($initiator, $conversation);
+
+        // Both legitimate members join successfully
+        Sanctum::actingAs($member);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        // A third user (even if added to conversation later) cannot join — call is full
+        $this->addToConversation($conversation, $outsider);
+        Sanctum::actingAs($outsider);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(409);
+    }
+
+    /** @test */
+    public function active_participant_can_reconnect_when_call_is_full(): void
+    {
+        // Idempotent join (already active) must succeed even when call is at capacity.
+        // The slot is already theirs — reconnect does not count against the limit.
+        $initiator    = $this->makeUser();
+        $member       = $this->makeUser();
+        $conversation = Conversation::factory()->create(['conversation_type' => 'direct']);
+        $this->addToConversation($conversation, $initiator);
+        $this->addToConversation($conversation, $member);
+
+        $call = $this->makeConversationCall($initiator, $conversation);
+
+        Sanctum::actingAs($member);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        // Call is now full (2/2) — but initiator can still reconnect
+        Sanctum::actingAs($initiator);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+    }
+
+    /** @test */
+    public function participant_can_rejoin_after_leaving_when_slot_is_free(): void
+    {
+        $initiator    = $this->makeUser();
+        $member       = $this->makeUser();
+        $conversation = Conversation::factory()->create(['conversation_type' => 'direct']);
+        $this->addToConversation($conversation, $initiator);
+        $this->addToConversation($conversation, $member);
+
+        $call = $this->makeConversationCall($initiator, $conversation);
+
+        // Member joins then leaves — slot frees up
+        Sanctum::actingAs($member);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+        $this->postJson("/api/v1/calls/$call->id/leave")->assertStatus(200);
+
+        // Member can rejoin — their slot is free again
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+    }
+
+    /** @test */
+    public function project_call_allows_all_team_members_to_join(): void
+    {
+        $initiator = $this->makeUser();
+        $project   = Project::factory()->create(['owner_id' => $initiator->id]);
+        $member1   = $this->makeUser();
+        $member2   = $this->makeUser();
+        $member3   = $this->makeUser();
+        $this->addToProject($project, $member1);
+        $this->addToProject($project, $member2);
+        $this->addToProject($project, $member3);
+
+        $call = $this->makeProjectCall($initiator, $project);
+
+        // All 3 members can join (plus initiator = 4 total, within team size)
+        Sanctum::actingAs($member1);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        Sanctum::actingAs($member2);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        Sanctum::actingAs($member3);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+    }
+
+    /** @test */
+    public function non_member_cannot_join_full_project_call(): void
+    {
+        $initiator = $this->makeUser();
+        $project   = Project::factory()->create(['owner_id' => $initiator->id]);
+        // Only 1 active member besides initiator — total team = 2
+        $member    = $this->makeUser();
+        $outsider  = $this->makeUser();
+        $this->addToProject($project, $member);
+
+        $call = $this->makeProjectCall($initiator, $project);
+
+        // Fill the call
+        Sanctum::actingAs($member);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        // Outsider is not a team member — rejected regardless of capacity
+        Sanctum::actingAs($outsider);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(409);
+    }
 
     /** @test */
     public function participant_can_leave_a_call(): void
