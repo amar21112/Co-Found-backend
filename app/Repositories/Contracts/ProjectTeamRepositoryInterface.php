@@ -11,6 +11,8 @@ interface ProjectTeamRepositoryInterface
 
     public function findMember(string $projectId, string $userId): ?ProjectTeamMember;
 
+    public function countActiveTeamMembers(string $projectId): int;
+
     public function addMember(string $projectId, string $userId, array $data): ProjectTeamMember;
 
     public function updateMember(ProjectTeamMember $member, array $data): ProjectTeamMember;

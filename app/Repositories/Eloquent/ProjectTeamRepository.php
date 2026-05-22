@@ -27,6 +27,13 @@ class ProjectTeamRepository implements ProjectTeamRepositoryInterface
             ->first();
     }
 
+    public function countActiveTeamMembers(string $projectId): int
+    {
+        return ProjectTeamMember::where('project_id', $projectId)
+            ->where('is_active', true)
+            ->count();
+    }
+
     public function addMember(string $projectId, string $userId, array $data): ProjectTeamMember
     {
         return ProjectTeamMember::create(array_merge($data, [

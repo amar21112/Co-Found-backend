@@ -24,6 +24,8 @@ interface VideoCallRepositoryInterface
 
     public function findParticipant(VideoCall $call, string $userId): ?CallParticipant;
 
+    public function activeParticipantCount(VideoCall $call): int;
+
     public function updateStatus(VideoCall $call, string $status): VideoCall;
 
     public function endCall(VideoCall $call): VideoCall;

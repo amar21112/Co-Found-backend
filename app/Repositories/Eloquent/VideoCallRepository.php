@@ -95,6 +95,13 @@ class VideoCallRepository implements VideoCallRepositoryInterface
             ->first();
     }
 
+    public function activeParticipantCount(VideoCall $call): int
+    {
+        return $call->participants()
+            ->whereNull('left_at')
+            ->count();
+    }
+
     public function updateStatus(VideoCall $call, string $status): VideoCall
     {
         $call->update(['status' => $status]);
