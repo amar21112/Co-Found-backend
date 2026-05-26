@@ -26,8 +26,7 @@ class InitiateCallRequest extends FormRequest
             'conversation_id' => [
                 'nullable',
                 'string',
-                'uuid',
-                'exists:conversations,id',
+                'max:255',
             ],
             'project_id' => [
                 'nullable',

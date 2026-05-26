@@ -11,21 +11,23 @@ use App\Exceptions\Call\CallNotFoundException;
 use App\Exceptions\Call\CallNotJoinableException;
 use App\Exceptions\Call\NotACallParticipantException;
 use App\Exceptions\Call\NotCallHostException;
+use App\Exceptions\ConversationNotFoundException;
+use App\Firebase\FirebaseService;
 use App\Models\User;
 use App\Models\VideoCall;
-use App\Repositories\Contracts\ConversationRepositoryInterface;
 use App\Repositories\Contracts\ProjectTeamRepositoryInterface;
 use App\Repositories\Contracts\VideoCallRepositoryInterface;
 use Firebase\JWT\JWT;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
+use Kreait\Firebase\Exception\DatabaseException;
 
 class VideoCallService
 {
     public function __construct(
         private readonly VideoCallRepositoryInterface  $callRepo,
         private readonly ProjectTeamRepositoryInterface $teamRepo,
-        private readonly ConversationRepositoryInterface $conversationRepo,
+        private readonly FirebaseService $firebaseService,
     ) {}
 
     // =========================================================================
@@ -52,9 +54,19 @@ class VideoCallService
      *
      * room_url stored in DB is always the bare path (no token embedded).
      * The frontend constructs the final URL as: {room_url}?jwt={join_token}
+     * @throws DatabaseException
+     * @throws ConversationNotFoundException
      */
     public function initiate(User $initiator, InitiateCallDTO $dto): VideoCall
     {
+        if ($dto->conversationId) {
+            if (! $this->firebaseService->exists(
+                $this->firebaseService->conversationPath($dto->conversationId)
+            )) {
+                throw new ConversationNotFoundException();
+            }
+        }
+
         $roomName = $this->generateRoomName();
         $roomUrl  = $this->buildRoomUrl($roomName);
 
@@ -329,6 +341,7 @@ class VideoCallService
      *
      * The initiator is always allowed to rejoin — they created the call and
      * already hold a host participant row.
+     * @throws DatabaseException
      */
     private function assertCanJoin(VideoCall $call, User $user): void
     {
@@ -349,7 +362,10 @@ class VideoCallService
 
         // Conversation call — enforce conversation membership
         if ($call->conversation_id) {
-            if (! $this->conversationRepo->isParticipant($call->conversation_id, $user->id)) {
+            if (! $this->firebaseService->isConversationParticipant(
+                $call->conversation_id,
+                $user->id
+            )) {
                 throw new CallNotJoinableException();
             }
 

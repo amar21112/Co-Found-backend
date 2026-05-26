@@ -20,4 +20,3 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 require base_path('routes/v1/projects.php');
 require base_path('routes/v1/chat.php');
-require base_path('routes/v1/files.php');

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class MissingTablesSeeder extends Seeder
@@ -13,12 +14,10 @@ class MissingTablesSeeder extends Seeder
         $this->seedPortfolioSkills();
         $this->seedSkillEndorsements();
         $this->seedMatchFeedback();
-        $this->seedMessageReadReceipts();
-        $this->seedMessageReactions();
         $this->seedContentModeration();
         $this->seedConfigurationHistory();
 
-        $this->command->info('MissingTablesSeeder: all 8 tables populated.');
+        $this->command->info('MissingTablesSeeder: all 6 tables populated.');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -28,7 +27,7 @@ class MissingTablesSeeder extends Seeder
     // ─────────────────────────────────────────────────────────────────────────
     private function seedApplicationSkills(): void
     {
-        $applications = \DB::table('project_applications')->get();
+        $applications = DB::table('project_applications')->get();
 
         if ($applications->isEmpty()) {
             $this->command->warn('  application_skills: no applications found, skipping.');
@@ -39,7 +38,7 @@ class MissingTablesSeeder extends Seeder
 
         foreach ($applications as $application) {
             // Pull the skills required by the project this person applied to
-            $projectSkills = \DB::table('project_skills')
+            $projectSkills = DB::table('project_skills')
                 ->where('project_id', $application->project_id)
                 ->pluck('skill_name')
                 ->shuffle()
@@ -57,7 +56,7 @@ class MissingTablesSeeder extends Seeder
 
         // Chunk to avoid hitting MySQL's max_allowed_packet on large datasets
         foreach (array_chunk($rows, 200) as $chunk) {
-            \DB::table('application_skills')->insertOrIgnore($chunk);
+            DB::table('application_skills')->insertOrIgnore($chunk);
         }
 
         $this->command->info('  application_skills: ' . count($rows) . ' rows inserted.');
@@ -69,7 +68,7 @@ class MissingTablesSeeder extends Seeder
     // ─────────────────────────────────────────────────────────────────────────
     private function seedPortfolioSkills(): void
     {
-        $items = \DB::table('portfolio_items')->get();
+        $items = DB::table('portfolio_items')->get();
 
         if ($items->isEmpty()) {
             $this->command->warn('  portfolio_skills: no portfolio items found, skipping.');
@@ -79,7 +78,7 @@ class MissingTablesSeeder extends Seeder
         $rows = [];
 
         foreach ($items as $item) {
-            $ownerSkills = \DB::table('user_skills')
+            $ownerSkills = DB::table('user_skills')
                 ->where('user_id', $item->user_id)
                 ->pluck('skill_name')
                 ->shuffle()
@@ -101,7 +100,7 @@ class MissingTablesSeeder extends Seeder
         }
 
         foreach (array_chunk($rows, 200) as $chunk) {
-            \DB::table('portfolio_skills')->insertOrIgnore($chunk);
+            DB::table('portfolio_skills')->insertOrIgnore($chunk);
         }
 
         $this->command->info('  portfolio_skills: ' . count($rows) . ' rows inserted.');
@@ -114,7 +113,7 @@ class MissingTablesSeeder extends Seeder
     private function seedSkillEndorsements(): void
     {
         // Only accepted connections can endorse
-        $connections = \DB::table('user_connections')
+        $connections = DB::table('user_connections')
             ->where('status', 'accepted')
             ->get();
 
@@ -129,7 +128,7 @@ class MissingTablesSeeder extends Seeder
         foreach ($connections as $conn) {
             // Endorser → skills of the recipient
             foreach ([$conn->requester_id => $conn->recipient_id, $conn->recipient_id => $conn->requester_id] as $endorserId => $skillOwnerId) {
-                $skills = \DB::table('user_skills')
+                $skills = DB::table('user_skills')
                     ->where('user_id', $skillOwnerId)
                     ->inRandomOrder()
                     ->take(rand(1, 3))
@@ -151,7 +150,7 @@ class MissingTablesSeeder extends Seeder
         }
 
         foreach (array_chunk($rows, 200) as $chunk) {
-            \DB::table('skill_endorsements')->insertOrIgnore($chunk);
+            DB::table('skill_endorsements')->insertOrIgnore($chunk);
         }
 
         $this->command->info('  skill_endorsements: ' . count($rows) . ' rows inserted.');
@@ -164,7 +163,7 @@ class MissingTablesSeeder extends Seeder
     private function seedMatchFeedback(): void
     {
         // Only matches that were viewed can have feedback
-        $matches = \DB::table('matches')->where('viewed', true)->get();
+        $matches = DB::table('matches')->where('viewed', true)->get();
 
         if ($matches->isEmpty()) {
             $this->command->warn('  match_feedback: no viewed matches found, skipping.');
@@ -187,109 +186,10 @@ class MissingTablesSeeder extends Seeder
         }
 
         foreach (array_chunk($rows, 200) as $chunk) {
-            \DB::table('match_feedback')->insertOrIgnore($chunk);
+            DB::table('match_feedback')->insertOrIgnore($chunk);
         }
 
         $this->command->info('  match_feedback: ' . count($rows) . ' rows inserted.');
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // message_read_receipts
-    // Mark messages as read for participants other than the sender.
-    // ─────────────────────────────────────────────────────────────────────────
-    private function seedMessageReadReceipts(): void
-    {
-        // Grab a sample of messages (not deleted) with their conversations
-        $messages = \DB::table('messages')
-            ->whereNull('deleted_at')
-            ->inRandomOrder()
-            ->take(300)
-            ->get(['id', 'conversation_id', 'sender_id', 'created_at']);
-
-        if ($messages->isEmpty()) {
-            $this->command->warn('  message_read_receipts: no messages found, skipping.');
-            return;
-        }
-
-        $rows = [];
-
-        foreach ($messages as $message) {
-            // Get all participants of this conversation except the sender
-            $readers = \DB::table('conversation_participants')
-                ->where('conversation_id', $message->conversation_id)
-                ->where('user_id', '!=', $message->sender_id)
-                ->pluck('user_id');
-
-            foreach ($readers as $readerId) {
-                // ~75 % chance the message was actually read
-                if (rand(0, 3) === 0) continue;
-
-                $rows[] = [
-                    'id'         => (string) Str::uuid(),
-                    'message_id' => $message->id,
-                    'user_id'    => $readerId,
-                    'read_at'    => now()->subMinutes(rand(1, 2880)),
-                ];
-            }
-        }
-
-        foreach (array_chunk($rows, 500) as $chunk) {
-            \DB::table('message_read_receipts')->insertOrIgnore($chunk);
-        }
-
-        $this->command->info('  message_read_receipts: ' . count($rows) . ' rows inserted.');
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // message_reactions
-    // Emoji reactions on messages — 1–3 reactions per sampled message.
-    // ─────────────────────────────────────────────────────────────────────────
-    private function seedMessageReactions(): void
-    {
-        $emojis = ['👍', '❤️', '😂', '🎉', '🔥', '👏', '😮', '🤔', '💯', '🚀'];
-
-        $messages = \DB::table('messages')
-            ->whereNull('deleted_at')
-            ->inRandomOrder()
-            ->take(150)
-            ->get(['id', 'conversation_id', 'sender_id']);
-
-        if ($messages->isEmpty()) {
-            $this->command->warn('  message_reactions: no messages found, skipping.');
-            return;
-        }
-
-        $rows  = [];
-        $pairs = collect(); // (message_id, user_id, reaction) must be unique
-
-        foreach ($messages as $message) {
-            $participants = \DB::table('conversation_participants')
-                ->where('conversation_id', $message->conversation_id)
-                ->pluck('user_id')
-                ->shuffle()
-                ->take(rand(1, 3));
-
-            foreach ($participants as $userId) {
-                $emoji = fake()->randomElement($emojis);
-                $key   = $message->id . '-' . $userId . '-' . $emoji;
-                if ($pairs->contains($key)) continue;
-                $pairs->push($key);
-
-                $rows[] = [
-                    'id'         => (string) Str::uuid(),
-                    'message_id' => $message->id,
-                    'user_id'    => $userId,
-                    'reaction'   => $emoji,
-                    'created_at' => now()->subMinutes(rand(1, 1440)),
-                ];
-            }
-        }
-
-        foreach (array_chunk($rows, 200) as $chunk) {
-            \DB::table('message_reactions')->insertOrIgnore($chunk);
-        }
-
-        $this->command->info('  message_reactions: ' . count($rows) . ' rows inserted.');
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -298,7 +198,7 @@ class MissingTablesSeeder extends Seeder
     // ─────────────────────────────────────────────────────────────────────────
     private function seedContentModeration(): void
     {
-        $moderators = \DB::table('users')
+        $moderators = DB::table('users')
             ->whereIn('role', ['moderator', 'admin'])
             ->pluck('id');
 
@@ -308,9 +208,8 @@ class MissingTablesSeeder extends Seeder
         }
 
         $contentTypes = [
-            'message' => \DB::table('messages')->whereNull('deleted_at')->inRandomOrder()->take(10)->pluck('id'),
-            'project' => \DB::table('projects')->inRandomOrder()->take(8)->pluck('id'),
-            'profile' => \DB::table('users')->where('role', 'regular_user')->inRandomOrder()->take(7)->pluck('id'),
+            'project' => DB::table('projects')->inRandomOrder()->take(8)->pluck('id'),
+            'profile' => DB::table('users')->where('role', 'regular_user')->inRandomOrder()->take(7)->pluck('id'),
         ];
 
         $actions = ['approved', 'edited', 'removed', 'quarantined', 'escalated'];
@@ -347,7 +246,7 @@ class MissingTablesSeeder extends Seeder
         }
 
         foreach (array_chunk($rows, 200) as $chunk) {
-            \DB::table('content_moderation')->insert($chunk);
+            DB::table('content_moderation')->insert($chunk);
         }
 
         $this->command->info('  content_moderation: ' . count($rows) . ' rows inserted.');
@@ -359,14 +258,14 @@ class MissingTablesSeeder extends Seeder
     // ─────────────────────────────────────────────────────────────────────────
     private function seedConfigurationHistory(): void
     {
-        $settings = \DB::table('system_settings')->get(['setting_key', 'setting_value', 'updated_by']);
+        $settings = DB::table('system_settings')->get(['setting_key', 'setting_value', 'updated_by']);
 
         if ($settings->isEmpty()) {
             $this->command->warn('  configuration_history: no system settings found, skipping.');
             return;
         }
 
-        $admins = \DB::table('users')
+        $admins = DB::table('users')
             ->whereIn('role', ['admin'])
             ->pluck('id');
 
@@ -409,7 +308,7 @@ class MissingTablesSeeder extends Seeder
         usort($rows, fn($a, $b) => $a['created_at'] <=> $b['created_at']);
 
         foreach (array_chunk($rows, 100) as $chunk) {
-            \DB::table('configuration_history')->insert($chunk);
+            DB::table('configuration_history')->insert($chunk);
         }
 
         $this->command->info('  configuration_history: ' . count($rows) . ' rows inserted.');

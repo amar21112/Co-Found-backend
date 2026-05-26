@@ -42,7 +42,6 @@ class Kernel extends HttpKernel
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \App\Http\Middleware\TrackUserPresence::class,
         ],
     ];
 
@@ -67,7 +66,6 @@ class Kernel extends HttpKernel
         'verified'         => \App\Http\Middleware\EnsureEmailIsVerified::class,
         'no.guest'         => \App\Http\Middleware\RestrictGuestAccess::class,
         'guest.content'    => \App\Http\Middleware\GuestContentMiddleware::class,
-        'chat.participant' => \App\Http\Middleware\EnsureConversationParticipant::class,
         'auth.ml'          => \App\Http\Middleware\AuthenticateMlService::class,
     ];
 }

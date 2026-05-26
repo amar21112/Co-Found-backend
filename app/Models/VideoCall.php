@@ -60,7 +60,6 @@ use Illuminate\Support\Collection;
  * @method static Builder|VideoCall whereUpdatedAt($value)
  *
  * @property-read User $initiator
- * @property-read Conversation|null $conversation
  * @property-read Project|null $project
  * @property-read Collection|CallParticipant[] $participants
  * @property-read Collection|CallParticipant[] $activeParticipants
@@ -93,11 +92,6 @@ class VideoCall extends Model
     public function initiator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'initiated_by');
-    }
-
-    public function conversation(): BelongsTo
-    {
-        return $this->belongsTo(Conversation::class);
     }
 
     public function project(): BelongsTo

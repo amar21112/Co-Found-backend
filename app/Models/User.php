@@ -108,13 +108,6 @@ use Laravel\Sanctum\HasApiTokens;
  * @property-read Collection|MatchFeedback[] $matchFeedback
  * @property-read Collection|CollaborationRating[] $ratingsGiven
  * @property-read Collection|CollaborationRating[] $ratingsReceived
- * @property-read Collection|Conversation[] $createdConversations
- * @property-read Collection|ConversationParticipant[] $conversationParticipations
- * @property-read Collection|Message[] $sentMessages
- * @property-read Collection|MessageReadReceipt[] $messageReadReceipts
- * @property-read Collection|MessageReaction[] $messageReactions
- * @property-read Collection|File[] $uploadedFiles
- * @property-read Collection|SharedFile[] $sharedFiles
  * @property-read Collection|VideoCall[] $initiatedCalls
  * @property-read Collection|CallParticipant[] $callParticipations
  * @property-read Collection|Notification[] $notifications
@@ -398,41 +391,6 @@ class User extends Authenticatable
     // =========================================================================
     // Relations — Communication Module
     // =========================================================================
-
-    public function createdConversations(): HasMany
-    {
-        return $this->hasMany(Conversation::class, 'created_by');
-    }
-
-    public function conversationParticipations(): HasMany
-    {
-        return $this->hasMany(ConversationParticipant::class);
-    }
-
-    public function sentMessages(): HasMany
-    {
-        return $this->hasMany(Message::class, 'sender_id');
-    }
-
-    public function messageReadReceipts(): HasMany
-    {
-        return $this->hasMany(MessageReadReceipt::class);
-    }
-
-    public function messageReactions(): HasMany
-    {
-        return $this->hasMany(MessageReaction::class);
-    }
-
-    public function uploadedFiles(): HasMany
-    {
-        return $this->hasMany(File::class, 'uploader_id');
-    }
-
-    public function sharedFiles(): HasMany
-    {
-        return $this->hasMany(SharedFile::class, 'shared_by');
-    }
 
     public function initiatedCalls(): HasMany
     {
