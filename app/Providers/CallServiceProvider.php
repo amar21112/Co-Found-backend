@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use App\Repositories\Contracts\ConversationRepositoryInterface;
+use App\Firebase\FirebaseService;
 use App\Repositories\Contracts\ProjectTeamRepositoryInterface;
 use App\Repositories\Contracts\VideoCallRepositoryInterface;
 use App\Repositories\Eloquent\VideoCallRepository;
@@ -22,7 +22,7 @@ class CallServiceProvider extends ServiceProvider
             return new VideoCallService(
                 $app->make(VideoCallRepositoryInterface::class),
                 $app->make(ProjectTeamRepositoryInterface::class),
-                $app->make(ConversationRepositoryInterface::class)
+                $app->make(FirebaseService::class)
             );
         });
     }

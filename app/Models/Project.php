@@ -82,7 +82,6 @@ use Illuminate\Support\Collection;
  * @property-read Collection|ProjectTeamMember[] $activeTeamMembers
  * @property-read Collection|ProjectApplication[] $applications
  * @property-read Collection|ProjectApplication[] $pendingApplications
- * @property-read Collection|Conversation[] $conversations
  * @property-read Collection|CollaborationInvitation[] $invitations
  * @property-read Collection|MatchModel[] $matches
  * @property-read Collection|CollaborationRating[] $ratings
@@ -166,11 +165,6 @@ class Project extends Model
     public function pendingApplications(): HasMany
     {
         return $this->hasMany(ProjectApplication::class)->where('status', 'pending');
-    }
-
-    public function conversations(): HasMany
-    {
-        return $this->hasMany(Conversation::class);
     }
 
     public function invitations(): HasMany
