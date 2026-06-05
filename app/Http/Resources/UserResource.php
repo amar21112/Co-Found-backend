@@ -34,7 +34,7 @@ class UserResource extends JsonResource
             // ── Profile picture — always returned as a full URL ───────────────
             // The DB column holds a relative storage path; we resolve it here.
             // Falls back to null when no picture is set.
-            'profile_picture_url' => $pictureService->toUrl($this->profile_picture_url),
+            'profile_picture_url' => env('APP_URL') . $pictureService->toUrl($this->profile_picture_url),
 
             'bio'      => $this->bio,
             'location' => $this->location,
