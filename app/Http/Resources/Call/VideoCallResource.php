@@ -18,19 +18,25 @@ class VideoCallResource extends JsonResource
             'status'           => $this->status->value,
             'room_name'        => $this->room_name,
 
-            // Bare room URL — only visible to existing participants.
+            // Bare room URL — only visible to confirmed participants.
             // This alone is NOT enough to enter the room on a JWT-secured
             // Jitsi instance. The frontend must use join_token instead.
             'room_url'         => $isPartic ? $this->room_url : null,
 
-            // Short-lived Jitsi JWT — present only on the /join response.
-            // Minted by VideoCallService::join() and stored as a transient
-            // attribute on the model (never persisted to the database).
-            // The frontend constructs the final URL as:
-            //   {room_url}?jwt={join_token}
+            // Short-lived Jitsi JWT — present only on initiate and join responses.
+            // Expires after token_ttl seconds (default 30s).
+            // The frontend must silently refresh it every token_refresh_interval
+            // seconds by calling POST /calls/{id}/join again.
             'join_token'       => $this->when(
                 isset($this->resource->join_token),
                 fn() => $this->resource->join_token
+            ),
+
+            // How often (seconds) the frontend should refresh the token.
+            // Only present alongside join_token — no point exposing it on list/show.
+            'token_refresh_interval' => $this->when(
+                isset($this->resource->join_token),
+                fn() => config('jitsi.token_refresh_interval', 25)
             ),
 
             'start_time'       => $this->start_time?->toISOString(),

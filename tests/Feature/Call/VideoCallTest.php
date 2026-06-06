@@ -24,13 +24,20 @@ class VideoCallTest extends TestCase
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Mock the two FirebaseService calls that VideoCallService makes:
-     *   - exists()  → initiate(): verify the conversation node exists in RTDB
-     *   - get()     → assertCanJoin(): read meta/participant_ids
+     * Mock FirebaseService for the test suite.
+     *
+     * Covers every method VideoCallService and JitsiReservationService call:
+     *   - exists()                      → initiate(): verify conversation exists
+     *   - isConversationParticipant()   → assertCanJoin() + verifyParticipant()
+     *   - isPrivateConversation()       → resolveMaxParticipants() / resolveActualLimit()
+     *   - conversationParticipantCount() → capacity for non-private conversations
+     *   - conversationPath()            → path builder used in initiate()
      */
     private function mockFirebase(
-        array $participantIds = [],
-        bool  $conversationExists = true,
+        array $participantIds      = [],
+        bool  $conversationExists  = true,
+        bool  $isPrivate           = true,
+        int   $participantCount    = 0,
     ): void {
         $mock = Mockery::mock(FirebaseService::class);
 
@@ -43,15 +50,18 @@ class VideoCallTest extends TestCase
         );
 
         $mock->shouldReceive('exists')->andReturn($conversationExists);
-        $mock->shouldReceive('get')->andReturn(
-            $participantIds ? ['participant_ids' => $participantIds] : null
-        );
 
-        // Add this — mock isConversationParticipant
         $mock->shouldReceive('isConversationParticipant')
             ->andReturnUsing(
-                fn(string $conversationId, string $userId) => in_array($userId, $participantIds)
+                fn(string $conversationId, string $userId) => in_array($userId, $participantIds, strict: true)
             );
+
+        $mock->shouldReceive('isPrivateConversation')
+            ->andReturn($isPrivate);
+
+        $count = $participantCount ?: count($participantIds);
+        $mock->shouldReceive('conversationParticipantCount')
+            ->andReturn($count);
 
         $this->app->instance(FirebaseService::class, $mock);
     }
@@ -65,8 +75,10 @@ class VideoCallTest extends TestCase
         return User::factory()->create(['password' => Hash::make('Secret123')]);
     }
 
-    private function makeScheduledConversationCall(User $initiator, string $conversationId = 'firebase-conv-key'): VideoCall
-    {
+    private function makeScheduledConversationCall(
+        User   $initiator,
+        string $conversationId = 'firebase-conv-key'
+    ): VideoCall {
         $call = VideoCall::factory()->scheduled()->forConversation($conversationId)->create([
             'initiated_by' => $initiator->id,
         ]);
@@ -79,8 +91,10 @@ class VideoCallTest extends TestCase
         return $call;
     }
 
-    private function makeActiveConversationCall(User $initiator, string $conversationId = 'firebase-conv-key'): VideoCall
-    {
+    private function makeActiveConversationCall(
+        User   $initiator,
+        string $conversationId = 'firebase-conv-key'
+    ): VideoCall {
         $call = VideoCall::factory()->active()->forConversation($conversationId)->create([
             'initiated_by' => $initiator->id,
         ]);
@@ -102,16 +116,7 @@ class VideoCallTest extends TestCase
 
     private function makeProjectCall(User $initiator, Project $project): VideoCall
     {
-        // In production, ProjectService::create() adds the owner to project_team_members.
-        // Replicate that here so capacity calculations are accurate in tests.
-        $this->addToProject(
-            $project,
-            $initiator,
-            [
-                'position'    => 'Founder',
-                'permissions' => 'owner',
-            ]
-        );
+        $this->addToProject($project, $initiator);
 
         $call = VideoCall::factory()->scheduled()->forProject($project->id)->create([
             'initiated_by' => $initiator->id,
@@ -198,7 +203,7 @@ class VideoCallTest extends TestCase
     }
 
     // =========================================================================
-    // POST /api/v1/calls  —  initiate
+    // POST /api/v1/calls — initiate
     // =========================================================================
 
     /** @test */
@@ -259,6 +264,45 @@ class VideoCallTest extends TestCase
     }
 
     /** @test */
+    public function initiate_stores_active_token_jti_on_host_participant_row(): void
+    {
+        $user = $this->makeUser();
+        $this->mockFirebase([$user->id]);
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/calls', ['conversation_id' => 'firebase-conv-key'])
+            ->assertStatus(201);
+
+        $call = VideoCall::where('initiated_by', $user->id)->first();
+
+        $participant = CallParticipant::where('call_id', $call->id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        // jti must be stored and must be a valid UUID
+        $this->assertNotNull($participant->active_token_jti);
+        $this->assertMatchesRegularExpression(
+            '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i',
+            $participant->active_token_jti
+        );
+    }
+
+    /** @test */
+    public function initiate_returns_token_refresh_interval(): void
+    {
+        $user = $this->makeUser();
+        $this->mockFirebase([$user->id]);
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/calls', ['conversation_id' => 'firebase-conv-key'])
+            ->assertStatus(201);
+
+        // token_refresh_interval must be present alongside join_token
+        $this->assertArrayHasKey('token_refresh_interval', $response->json('data'));
+        $this->assertGreaterThan(0, $response->json('data.token_refresh_interval'));
+    }
+
+    /** @test */
     public function call_type_is_derived_server_side_not_from_client(): void
     {
         $user = $this->makeUser();
@@ -281,6 +325,22 @@ class VideoCallTest extends TestCase
             ->assertStatus(201);
 
         $this->assertStringStartsWith('cofound-', VideoCall::latest()->first()->room_name);
+    }
+
+    /** @test */
+    public function room_name_is_lowercase(): void
+    {
+        // strtolower() on Str::random() ensures room name matches Jitsi's
+        // internal lowercasing so the JWT room claim never mismatches the MUC JID.
+        $user = $this->makeUser();
+        $this->mockFirebase([$user->id]);
+        Sanctum::actingAs($user);
+
+        $this->postJson('/api/v1/calls', ['conversation_id' => 'firebase-conv-key'])
+            ->assertStatus(201);
+
+        $roomName = VideoCall::latest()->first()->room_name;
+        $this->assertEquals(strtolower($roomName), $roomName);
     }
 
     /** @test */
@@ -383,6 +443,7 @@ class VideoCallTest extends TestCase
 
         $response = $this->getJson("/api/v1/calls/$call->id")->assertStatus(200);
         $this->assertArrayNotHasKey('join_token', $response->json('data'));
+        $this->assertArrayNotHasKey('token_refresh_interval', $response->json('data'));
     }
 
     /** @test */
@@ -396,7 +457,7 @@ class VideoCallTest extends TestCase
     }
 
     // =========================================================================
-    // POST /api/v1/calls/{id}/join
+    // POST /api/v1/calls/{id}/join — access + token issuance
     // =========================================================================
 
     /** @test */
@@ -411,7 +472,7 @@ class VideoCallTest extends TestCase
         $this->postJson("/api/v1/calls/$call->id/join")
             ->assertStatus(200)
             ->assertJsonPath('data.status', 'active')
-            ->assertJsonStructure(['data' => ['join_token']]);
+            ->assertJsonStructure(['data' => ['join_token', 'token_refresh_interval']]);
 
         $this->assertDatabaseHas('call_participants', [
             'call_id' => $call->id,
@@ -425,11 +486,128 @@ class VideoCallTest extends TestCase
     {
         $initiator = $this->makeUser();
         $outsider  = $this->makeUser();
-        $this->mockFirebase([$initiator->id]);
+        $this->mockFirebase([$initiator->id]); // outsider not in list
         $call = $this->makeScheduledConversationCall($initiator);
         Sanctum::actingAs($outsider);
 
         $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(409);
+    }
+
+    /** @test */
+    public function join_stores_active_token_jti_on_participant_row(): void
+    {
+        $initiator = $this->makeUser();
+        $joiner    = $this->makeUser();
+        $this->mockFirebase([$initiator->id, $joiner->id]);
+        $call = $this->makeScheduledConversationCall($initiator);
+        Sanctum::actingAs($joiner);
+
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        $participant = CallParticipant::where('call_id', $call->id)
+            ->where('user_id', $joiner->id)
+            ->first();
+
+        $this->assertNotNull($participant->active_token_jti);
+        $this->assertMatchesRegularExpression(
+            '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i',
+            $participant->active_token_jti
+        );
+    }
+
+    /** @test */
+    public function reconnect_issues_fresh_token_and_updates_jti(): void
+    {
+        // When an already-active participant calls /join again (idempotent reconnect),
+        // a new jti must be minted and stored, invalidating the previous token.
+        $initiator = $this->makeUser();
+        $this->mockFirebase([$initiator->id]);
+        $call = $this->makeActiveConversationCall($initiator);
+        Sanctum::actingAs($initiator);
+
+        // First /join — get initial jti
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+        $jtiFirst = CallParticipant::where('call_id', $call->id)
+            ->where('user_id', $initiator->id)
+            ->value('active_token_jti');
+
+        // Second /join — must get a different jti
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+        $jtiSecond = CallParticipant::where('call_id', $call->id)
+            ->where('user_id', $initiator->id)
+            ->value('active_token_jti');
+
+        $this->assertNotEquals($jtiFirst, $jtiSecond,
+            'Each /join must produce a new jti to invalidate previously shared tokens.'
+        );
+    }
+
+    /** @test */
+    public function join_response_includes_token_refresh_interval(): void
+    {
+        // The frontend uses this value to schedule silent token refreshes.
+        // It must never be hardcoded on the client side.
+        $initiator = $this->makeUser();
+        $joiner    = $this->makeUser();
+        $this->mockFirebase([$initiator->id, $joiner->id]);
+        $call = $this->makeScheduledConversationCall($initiator);
+        Sanctum::actingAs($joiner);
+
+        $response = $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        $this->assertArrayHasKey('token_refresh_interval', $response->json('data'));
+        $interval = $response->json('data.token_refresh_interval');
+        $this->assertGreaterThan(0, $interval);
+        $this->assertLessThan(config('jitsi.token_ttl', 30), $interval);
+    }
+
+    /** @test */
+    public function rejoin_after_leave_stores_new_jti(): void
+    {
+        // When a participant rejoins after leaving, the old jti (which was
+        // cleared on leave) must be replaced with a fresh one.
+        $initiator = $this->makeUser();
+        $joiner    = $this->makeUser();
+        $this->mockFirebase([$initiator->id, $joiner->id]);
+        $call = $this->makeActiveConversationCall($initiator);
+
+        CallParticipant::factory()->left()->create([
+            'call_id'          => $call->id,
+            'user_id'          => $joiner->id,
+            'active_token_jti' => null, // cleared on leave
+        ]);
+        Sanctum::actingAs($joiner);
+
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        $participant = CallParticipant::where('call_id', $call->id)
+            ->where('user_id', $joiner->id)
+            ->first();
+
+        $this->assertNull($participant->left_at);
+        $this->assertNotNull($participant->active_token_jti);
+    }
+
+    /** @test */
+    public function leave_clears_active_token_jti(): void
+    {
+        // When a participant leaves, their jti must be cleared so a stale token
+        // cannot be used to rejoin (the jti check only applies to active rows,
+        // but clearing it is defensive practice and keeps the data clean).
+        $initiator = $this->makeUser();
+        $joiner    = $this->makeUser();
+        $this->mockFirebase([$initiator->id, $joiner->id]);
+        $call = $this->makeActiveConversationCall($initiator);
+        $this->joinCall($call, $joiner);
+        Sanctum::actingAs($joiner);
+
+        $this->postJson("/api/v1/calls/$call->id/leave")->assertStatus(200);
+
+        $participant = CallParticipant::where('call_id', $call->id)
+            ->where('user_id', $joiner->id)
+            ->first();
+
+        $this->assertNull($participant->active_token_jti);
     }
 
     /** @test */
@@ -508,6 +686,118 @@ class VideoCallTest extends TestCase
         $this->assertFalse(property_exists($record, 'join_token'));
     }
 
+    // =========================================================================
+    // POST /api/v1/calls/{id}/join — capacity enforcement
+    // =========================================================================
+
+    /** @test */
+    public function private_conversation_call_is_limited_to_two_participants(): void
+    {
+        // isPrivate = true → max 2.
+        // Initiator already holds slot 1. Joiner takes slot 2.
+        // A third person is blocked even though they are in the participant list.
+        $initiator = $this->makeUser();
+        $joiner    = $this->makeUser();
+        $third     = $this->makeUser();
+
+        $this->mockFirebase(
+            participantIds: [$initiator->id, $joiner->id, $third->id],
+            isPrivate: true
+        );
+
+        $call = $this->makeScheduledConversationCall($initiator);
+
+        // Joiner takes the second slot
+        Sanctum::actingAs($joiner);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        // Third person — call is full
+        Sanctum::actingAs($third);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(409);
+    }
+
+    /** @test */
+    public function group_conversation_call_allows_all_members(): void
+    {
+        // isPrivate = false → cap = participantCount (3 here).
+        $initiator = $this->makeUser();
+        $member1   = $this->makeUser();
+        $member2   = $this->makeUser();
+
+        $this->mockFirebase(
+            participantIds: [$initiator->id, $member1->id, $member2->id],
+            isPrivate: false,
+            participantCount: 3
+        );
+
+        $call = $this->makeScheduledConversationCall($initiator);
+
+        Sanctum::actingAs($member1);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        Sanctum::actingAs($member2);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+    }
+
+    /** @test */
+    public function reconnect_does_not_count_against_capacity(): void
+    {
+        // An already-active participant calling /join again must not be blocked
+        // even when the call is at capacity. Their slot is already taken.
+        $initiator = $this->makeUser();
+        $joiner    = $this->makeUser();
+
+        $this->mockFirebase(
+            participantIds: [$initiator->id, $joiner->id],
+            isPrivate: true  // max 2 — call will be full after joiner joins
+        );
+
+        $call = $this->makeScheduledConversationCall($initiator);
+
+        Sanctum::actingAs($joiner);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        // Call is now at capacity (2/2).
+        // Initiator reconnects — must succeed because slot is already theirs.
+        Sanctum::actingAs($initiator);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+    }
+
+    /** @test */
+    public function project_call_allows_all_team_members(): void
+    {
+        $initiator = $this->makeUser();
+        $member1   = $this->makeUser();
+        $member2   = $this->makeUser();
+        $project   = Project::factory()->create(['owner_id' => $initiator->id]);
+
+        $this->addToProject($project, $member1);
+        $this->addToProject($project, $member2);
+        $this->mockFirebase();
+
+        $call = $this->makeProjectCall($initiator, $project);
+
+        Sanctum::actingAs($member1);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+
+        Sanctum::actingAs($member2);
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(200);
+    }
+
+    /** @test */
+    public function project_call_blocks_non_member(): void
+    {
+        $initiator = $this->makeUser();
+        $project   = Project::factory()->create(['owner_id' => $initiator->id]);
+        $this->mockFirebase();
+
+        $call = $this->makeProjectCall($initiator, $project);
+
+        Sanctum::actingAs($this->makeUser()); // outsider
+
+        $this->postJson("/api/v1/calls/$call->id/join")->assertStatus(409);
+    }
+
     /** @test */
     public function project_team_member_can_join_project_call(): void
     {
@@ -553,6 +843,7 @@ class VideoCallTest extends TestCase
         $participant = CallParticipant::where('call_id', $call->id)
             ->where('user_id', $joiner->id)->first();
         $this->assertNotNull($participant->left_at);
+        $this->assertNull($participant->active_token_jti); // cleared on leave
     }
 
     /** @test */
@@ -639,6 +930,26 @@ class VideoCallTest extends TestCase
             0,
             CallParticipant::where('call_id', $call->id)->whereNull('left_at')->count()
         );
+    }
+
+    /** @test */
+    public function ending_a_call_clears_all_participant_jtis(): void
+    {
+        // When the host ends the call, all active_token_jti values must be
+        // cleared so no dangling tokens can be used to re-enter a destroyed room.
+        $initiator = $this->makeUser();
+        $this->mockFirebase([$initiator->id]);
+        $call = $this->makeActiveConversationCall($initiator);
+        $this->joinCall($call, $this->makeUser());
+        Sanctum::actingAs($initiator);
+
+        $this->patchJson("/api/v1/calls/$call->id/end")->assertStatus(200);
+
+        $hasJti = CallParticipant::where('call_id', $call->id)
+            ->whereNotNull('active_token_jti')
+            ->exists();
+
+        $this->assertFalse($hasJti);
     }
 
     /** @test */

@@ -12,13 +12,17 @@ interface VideoCallRepositoryInterface
 {
     public function findById(string $id): ?VideoCall;
 
+    public function findActiveByRoomName(string $roomName): ?VideoCall;
+
     public function paginateForUser(string $userId, array $filters, int $perPage): LengthAwarePaginator;
 
     public function create(User $initiator, InitiateCallDTO $dto, string $roomName, string $roomUrl): VideoCall;
 
-    public function addParticipant(VideoCall $call, User $user, string $role): CallParticipant;
+    public function addParticipant(VideoCall $call, User $user, string $role, string $jti): CallParticipant;
 
-    public function rejoinParticipant(CallParticipant $participant): CallParticipant;
+    public function rejoinParticipant(CallParticipant $participant, string $jti): CallParticipant;
+
+    public function updateParticipantJti(CallParticipant $participant, string $jti): void;
 
     public function markParticipantLeft(CallParticipant $participant): CallParticipant;
 
