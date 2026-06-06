@@ -67,5 +67,6 @@ class Kernel extends HttpKernel
         'no.guest'         => \App\Http\Middleware\RestrictGuestAccess::class,
         'guest.content'    => \App\Http\Middleware\GuestContentMiddleware::class,
         'auth.ml'          => \App\Http\Middleware\AuthenticateMlService::class,
+        'auth.jitsi'       => \App\Http\Middleware\AuthenticateJitsiService::class,
     ];
 }

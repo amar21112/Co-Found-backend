@@ -25,9 +25,9 @@ use Kreait\Firebase\Exception\DatabaseException;
 class VideoCallService
 {
     public function __construct(
-        private readonly VideoCallRepositoryInterface  $callRepo,
+        private readonly VideoCallRepositoryInterface   $callRepo,
         private readonly ProjectTeamRepositoryInterface $teamRepo,
-        private readonly FirebaseService $firebaseService,
+        private readonly FirebaseService               $firebaseService,
     ) {}
 
     // =========================================================================
@@ -54,6 +54,7 @@ class VideoCallService
      *
      * room_url stored in DB is always the bare path (no token embedded).
      * The frontend constructs the final URL as: {room_url}?jwt={join_token}
+     *
      * @throws DatabaseException
      * @throws ConversationNotFoundException
      */
@@ -72,16 +73,17 @@ class VideoCallService
 
         $call = $this->callRepo->create($initiator, $dto, $roomName, $roomUrl);
 
+        [$token, $jti] = $this->mintJwt($call, $initiator);
+
         $this->callRepo->addParticipant(
             $call,
             $initiator,
-            CallParticipantRole::Host->value
+            CallParticipantRole::Host->value,
+            $jti
         );
 
         $call = $call->load(['initiator', 'participants.user']);
-
-        // Mint the host token immediately — initiator goes straight to the room
-        $call->join_token = $this->mintJwt($call, $initiator);
+        $call->join_token = $token;
 
         return $call;
     }
@@ -109,29 +111,22 @@ class VideoCallService
      * Join a call and receive a short-lived Jitsi JWT for that room.
      *
      * Access control:
-     *   - Project call      → active project team member only
-     *   - Conversation call → conversation participant only
+     *   - Project call      → active project team member only (MySQL)
+     *   - Conversation call → participant of that conversation (Firebase)
      *   - No context        → rejected (fail-closed)
      *
      * Capacity control:
-     *   - Conversation (direct)  → max 2 (only the two members)
-     *   - Conversation (group)   → max = active conversation member count
-     *   - Project call           → max = active project team member count
-     *   Already-active participants are not counted against the limit for
-     *   their own reconnect — idempotent join always succeeds.
+     *   - Private conversation → max 2
+     *   - Group conversation   → active participant count (Firebase)
+     *   - Project call         → active team member count (MySQL)
      *
-     * Token-in-use protection:
-     *   A JWT is bound to a specific user.id. If user A shares their token
-     *   URL, user B still hits /join with their own auth and gets their own
-     *   token — or is blocked by the capacity/membership check. The
-     *   call_participants table (left_at IS NULL) is the single source of
-     *   truth for who is "in" the call; no separate token tracking needed.
+     * Token rotation:
+     *   The minted jti is stored on the participant row as active_token_jti.
+     *   mod_cofound_access verifies jti on every Prosody MUC join.
+     *   The frontend refreshes every 25s — each refresh mints a new jti,
+     *   invalidating any previously shared token at the DB level.
      *
-     * State rules:
-     *   - Terminal calls (ended / cancelled) cannot be joined.
-     *   - Rejoining after leave resets left_at on the existing row.
-     *   - Already active → idempotent (safe on frontend reconnect).
-     *   - Joining a scheduled call activates it.
+     * @throws DatabaseException
      */
     public function join(VideoCall $call, User $user): VideoCall
     {
@@ -145,19 +140,21 @@ class VideoCallService
         // ── Participant record ─────────────────────────────────────────────────
         $existing = $this->callRepo->findParticipant($call, $user->id);
 
+        [$token, $jti] = $this->mintJwt($call, $user);
+
         if ($existing) {
             if ($existing->left_at === null) {
-                // Already active — idempotent reconnect, mint a fresh token.
-                // Does NOT count against capacity — the slot is already theirs.
-                $call->join_token = $this->mintJwt($call, $user);
+                // Already active — idempotent reconnect.
+                // Update jti: the new token is now the valid one, any session
+                // still holding the old jti will be blocked by mod_cofound_access.
+                $this->callRepo->updateParticipantJti($existing, $jti);
+                $call->join_token = $token;
                 return $call->load(['initiator', 'participants.user']);
             }
 
-            // Previously left — check capacity before reclaiming their slot.
-            // (Another member may have taken the last slot while they were gone.)
             $this->assertCapacity($call);
 
-            $this->callRepo->rejoinParticipant($existing);
+            $this->callRepo->rejoinParticipant($existing, $jti);
         } else {
             // Brand new participant — must fit within capacity.
             $this->assertCapacity($call);
@@ -165,7 +162,8 @@ class VideoCallService
             $this->callRepo->addParticipant(
                 $call,
                 $user,
-                CallParticipantRole::Participant->value
+                CallParticipantRole::Participant->value,
+                $jti
             );
         }
 
@@ -173,7 +171,7 @@ class VideoCallService
             $call = $this->callRepo->updateStatus($call, CallStatus::Active->value);
         }
 
-        $call->join_token = $this->mintJwt($call, $user);
+        $call->join_token = $token;
 
         return $call->load(['initiator', 'participants.user']);
     }
@@ -277,10 +275,11 @@ class VideoCallService
     // =========================================================================
 
     /**
-     * Mint a Jitsi-compatible JWT for the given user and room.
+     * Mint a Jitsi JWT and return [token, jti].
      *
-     * The token follows the Jitsi JWT structure:
-     *   https://github.com/jitsi/lib-jitsi-meet/blob/master/doc/tokens.md
+     * jti is placed at the top level (JWT spec) AND inside context.user so
+     * mod_auth_token copies it to session.jitsi_meet_context_user, where
+     * mod_cofound_access reads it without re-parsing the full JWT.
      *
      * Jitsi's prosody token plugin validates:
      *   - iss  → must match APP_ID configured in prosody
@@ -288,15 +287,20 @@ class VideoCallService
      *   - sub  → the XMPP domain of your Jitsi server
      *   - room → the specific room this token is valid for (scopes the token)
      *   - exp  → token expiry (JITSI_TOKEN_TTL seconds from now)
+     *
+     * Token TTL: JITSI_TOKEN_TTL (default 30s).
+     * Frontend must refresh every JITSI_TOKEN_REFRESH_INTERVAL (default 25s).
+     *
+     * @return array{0: string, 1: string} [token, jti]
      */
-    private function mintJwt(VideoCall $call, User $user): string
+    private function mintJwt(VideoCall $call, User $user): array
     {
         $appId     = config('jitsi.app_id');
         $appSecret = config('jitsi.app_secret');
         $domain    = parse_url(config('jitsi.base_url'), PHP_URL_HOST);
         $ttl       = (int) config('jitsi.token_ttl');
-
-        $isHost = $call->initiated_by === $user->id;
+        $jti       = Str::uuid()->toString();
+        $isHost    = $call->initiated_by === $user->id;
 
         $payload = [
             'iss'  => $appId,
@@ -305,25 +309,28 @@ class VideoCallService
             'room' => strtolower($call->room_name),
             'exp'  => time() + $ttl,
             'iat'  => time(),
+            'nbf'  => time() - 5,
+            'jti'  => $jti,
             'context' => [
                 'user' => [
                     'id'     => $user->id,
                     'name'   => $user->full_name,
                     'email'  => $user->email,
                     'avatar' => $user->profile_picture_url ?? '',
+                    'jti'    => $jti,
                 ],
                 'features' => [
-                    // Only the call initiator gets moderator rights
-                    'recording'  => $isHost,
-                    'livestream' => false,
-                    'outbound-call' => false,
+                    'recording'      => $isHost,
+                    'livestream'     => false,
+                    'outbound-call'  => false,
                 ],
             ],
-            // Jitsi uses this to grant moderator / kick rights
             'moderator' => $isHost,
         ];
 
-        return JWT::encode($payload, $appSecret, 'HS256');
+        return [
+            JWT::encode($payload, $appSecret, 'HS256'), $jti
+        ];
     }
 
     // =========================================================================
@@ -339,8 +346,6 @@ class VideoCallService
      * context-less call record exists (e.g. created directly in the DB,
      * or via a future code path that bypasses the request class).
      *
-     * The initiator is always allowed to rejoin — they created the call and
-     * already hold a host participant row.
      * @throws DatabaseException
      */
     private function assertCanJoin(VideoCall $call, User $user): void
@@ -372,9 +377,6 @@ class VideoCallService
             return;
         }
 
-        // No context at all — fail closed.
-        // A well-formed call never reaches here; this guards against
-        // corrupt data or direct DB writes bypassing validation.
         throw new CallNotJoinableException();
     }
 
@@ -383,19 +385,8 @@ class VideoCallService
     // =========================================================================
 
     /**
-     * Enforce per-call participant limits.
-     *
-     * Conversation (direct):  max 2 — only the two members can ever be present.
-     * Conversation (group):   max = current active member count of the conversation.
-     *                         Everyone who belongs can join, but no one outside.
-     * Project call:           max = current active team member count.
-     *                         All team members can join; no one outside.
-     *
-     * The initiator's slot is always available (they created the call and
-     * already hold a host row from initiate(), so their join is idempotent
-     * and never reaches this check).
-     *
-     * @throws CallFullException if all slots are currently occupied.
+     * @throws CallFullException
+     * @throws DatabaseException
      */
     private function assertCapacity(VideoCall $call): void
     {
@@ -412,23 +403,23 @@ class VideoCallService
      *
      * Direct conversation → exactly 2 (the two members, no extras).
      * Group/project conversation → all active members of that context.
+     *
+     * @throws DatabaseException
      */
     private function resolveMaxParticipants(VideoCall $call): int
     {
         if ($call->conversation_id) {
-            $conversation = $this->callRepo->findById($call->conversation_id);
-
-            if ($conversation?->isDirect()) {
+            if ($this->firebaseService->isPrivateConversation($call->conversation_id)) {
                 return 2;
             }
 
-            // Group / project conversation — all active members
-            return $conversation?->activeParticipants()->count() ?? 2;
+            return max(2, $this->firebaseService->conversationParticipantCount(
+                $call->conversation_id
+            ));
         }
 
         if ($call->project_id) {
-            // All active team members of the project
-            return $this->teamRepo->countActiveTeamMembers($call->project_id);
+            return max(2, $this->teamRepo->countActiveTeamMembers($call->project_id));
         }
 
         // Fallback — should never reach here given context enforcement
@@ -436,7 +427,7 @@ class VideoCallService
     }
 
     // =========================================================================
-    // Private — access enforcement
+    // Private — room helpers
     // =========================================================================
 
     /**

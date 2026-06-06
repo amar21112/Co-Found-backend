@@ -23,6 +23,8 @@ use App\Exceptions\Call\CallAlreadyEndedException;
 use App\Exceptions\Call\CallFullException;
 use App\Exceptions\Call\CallNotFoundException;
 use App\Exceptions\Call\CallNotJoinableException;
+use App\Exceptions\Call\CallParticipantNotAllowedException;
+use App\Exceptions\Call\CallReservationDeniedException;
 use App\Exceptions\Call\NotACallParticipantException;
 use App\Exceptions\Call\NotCallHostException;
 use App\Exceptions\Match\FeedbackAlreadySubmittedException;
@@ -90,6 +92,8 @@ class Handler extends ExceptionHandler
         CallAlreadyEndedException::class,
         CallFullException::class,
         CallNotJoinableException::class,
+        CallParticipantNotAllowedException::class,
+        CallReservationDeniedException::class,
         NotACallParticipantException::class,
         NotCallHostException::class,
 
@@ -228,6 +232,16 @@ class Handler extends ExceptionHandler
 
         $this->renderable(fn(CallFullException $e) =>
             $this->error($e->getMessage(), Response::HTTP_CONFLICT)
+        );
+
+        // 403 → Prosody reads this as "deny room creation"
+        $this->renderable(fn(CallReservationDeniedException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_FORBIDDEN)
+        );
+
+        // 403 → Prosody reads this as "deny participant join"
+        $this->renderable(fn(CallParticipantNotAllowedException $e) =>
+            $this->error($e->getMessage(), Response::HTTP_FORBIDDEN)
         );
 
         $this->renderable(fn(NotACallParticipantException $e) =>

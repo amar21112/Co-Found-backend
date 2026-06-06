@@ -3,7 +3,6 @@
 namespace App\Repositories\Eloquent;
 
 use App\DTOs\Call\InitiateCallDTO;
-use App\Enums\CallParticipantRole;
 use App\Enums\CallStatus;
 use App\Models\CallParticipant;
 use App\Models\User;
@@ -16,6 +15,14 @@ class VideoCallRepository implements VideoCallRepositoryInterface
     public function findById(string $id): ?VideoCall
     {
         return VideoCall::with(['initiator', 'participants.user'])->find($id);
+    }
+
+    public function findActiveByRoomName(string $roomName): ?VideoCall
+    {
+        return VideoCall::with(['initiator', 'participants.user'])
+            ->where('room_name', $roomName)
+            ->whereNotIn('status', ['ended', 'cancelled'])
+            ->first();
     }
 
     public function paginateForUser(string $userId, array $filters, int $perPage): LengthAwarePaginator
@@ -53,25 +60,32 @@ class VideoCallRepository implements VideoCallRepositoryInterface
         ]);
     }
 
-    public function addParticipant(VideoCall $call, User $user, string $role): CallParticipant
+    public function addParticipant(VideoCall $call, User $user, string $role, string $jti): CallParticipant
     {
         return CallParticipant::create([
-            'call_id'   => $call->id,
-            'user_id'   => $user->id,
-            'role'      => $role,
-            'joined_at' => now(),
+            'call_id'          => $call->id,
+            'user_id'          => $user->id,
+            'role'             => $role,
+            'joined_at'        => now(),
+            'active_token_jti' => $jti,
         ]);
     }
 
-    public function rejoinParticipant(CallParticipant $participant): CallParticipant
+    public function rejoinParticipant(CallParticipant $participant, string $jti): CallParticipant
     {
         $participant->update([
             'joined_at'        => now(),
             'left_at'          => null,
             'duration_seconds' => null,
+            'active_token_jti' => $jti,
         ]);
 
         return $participant->fresh();
+    }
+
+    public function updateParticipantJti(CallParticipant $participant, string $jti): void
+    {
+        $participant->update(['active_token_jti' => $jti]);
     }
 
     public function markParticipantLeft(CallParticipant $participant): CallParticipant
@@ -83,6 +97,7 @@ class VideoCallRepository implements VideoCallRepositoryInterface
         $participant->update([
             'left_at'          => $leftAt,
             'duration_seconds' => $duration,
+            'active_token_jti' => null, // clear the jti when participant leaves
         ]);
 
         return $participant->fresh();
@@ -112,11 +127,9 @@ class VideoCallRepository implements VideoCallRepositoryInterface
     {
         $endTime = now();
 
-        // Mark any participants still in the call as left
-        $activeParticipants = $call->activeParticipants()->get();
-        foreach ($activeParticipants as $participant) {
+        $call->participants()->whereNull('left_at')->get()->each(function (CallParticipant $participant) {
             $this->markParticipantLeft($participant);
-        }
+        });
 
         $startTime       = $call->start_time ?? $call->created_at;
         $durationSeconds = $startTime ? (int) $startTime->diffInSeconds($endTime) : null;
@@ -133,8 +146,8 @@ class VideoCallRepository implements VideoCallRepositoryInterface
     public function cancelCall(VideoCall $call): VideoCall
     {
         $call->update([
-            'status'  => CallStatus::Cancelled->value,
-            'end_time'=> now(),
+            'status'   => CallStatus::Cancelled->value,
+            'end_time' => now(),
         ]);
 
         return $call->fresh(['initiator', 'participants.user']);
