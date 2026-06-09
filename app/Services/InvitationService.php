@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Exceptions\ConflictException;
+use App\Mail\Collaboration\InvitationReceivedMail;
 use App\Models\CollaborationInvitation;
 use App\Models\User;
 use App\Traits\SendsNotifications;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class InvitationService
@@ -102,6 +104,16 @@ class InvitationService
             body:     "{$sender->full_name} invited you: {$typeLabel}.",
             data:     ['invitation_id' => $invitation->id, 'sender_id' => $sender->id],
             priority: 'high',
+        );
+
+        $recipient = User::find($data['recipient_id']);
+
+        Mail::to($recipient->email)->queue(
+            new InvitationReceivedMail(
+                recipient:  $recipient,
+                sender:     $sender,
+                invitation: $invitation->load(['sender', 'recipient', 'project']),
+            )
         );
 
         return $invitation;

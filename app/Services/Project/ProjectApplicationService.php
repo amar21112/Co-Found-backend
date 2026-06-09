@@ -7,6 +7,9 @@ use App\Exceptions\ApplicationAlreadyExistsException;
 use App\Exceptions\ApplicationNotWithdrawableException;
 use App\Exceptions\ProjectException;
 use App\Exceptions\ProjectNotAcceptingApplicationsException;
+use App\Mail\Project\ApplicationAcceptedMail;
+use App\Mail\Project\ApplicationReceivedMail;
+use App\Mail\Project\ApplicationRejectedMail;
 use App\Models\ApplicationSkill;
 use App\Models\Project;
 use App\Models\ProjectApplication;
@@ -16,6 +19,7 @@ use App\Repositories\Contracts\ProjectRoleRepositoryInterface;
 use App\Repositories\Contracts\ProjectTeamRepositoryInterface;
 use App\Traits\SendsNotifications;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 
@@ -102,6 +106,16 @@ class ProjectApplicationService
             priority: 'high',
         );
 
+        $owner = $project->owner;   // eager-load or resolve the owner model
+        Mail::to($owner->email)->queue(
+            new ApplicationReceivedMail(
+                owner:       $owner,
+                applicant:   $applicant,
+                project:     $project,
+                application: $fresh,
+            )
+        );
+
         return $fresh;
     }
 
@@ -168,6 +182,14 @@ class ProjectApplicationService
                 priority: 'high',
             );
 
+            Mail::to($application->applicant->email)->queue(
+                new ApplicationAcceptedMail(
+                    applicant:   $application->applicant,
+                    project:     $project,
+                    application: $this->applicationRepo->findById($application->id),
+                )
+            );
+
             return $this->applicationRepo->findById($application->id);
         }
 
@@ -189,6 +211,14 @@ class ProjectApplicationService
                     'application_id' => $application->id,
                 ],
                 priority: 'normal',
+            );
+
+            Mail::to($application->applicant->email)->queue(
+                new ApplicationRejectedMail(
+                    applicant:   $application->applicant,
+                    project:     $project,
+                    application: $updated,
+                )
             );
         }
 
