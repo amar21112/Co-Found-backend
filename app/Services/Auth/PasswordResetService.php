@@ -5,10 +5,12 @@ namespace App\Services\Auth;
 use App\DTOs\Auth\ForgotPasswordDTO;
 use App\DTOs\Auth\ResetPasswordDTO;
 use App\Exceptions\Auth\InvalidPasswordResetTokenException;
+use App\Mail\Auth\ResetPasswordMail;
 use App\Repositories\Contracts\PasswordResetRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class PasswordResetService
@@ -54,8 +56,8 @@ class PasswordResetService
 
         $this->passwordResetRepository->createForUser($user, $token, $expiresAt);
 
-        // TODO: swap with a proper Mailable once the mail module is built.
-        // Mail::to($user->email)->send(new ResetPasswordMail($token));
+        Mail::to($user->email)->send(new ResetPasswordMail($user, $token));
+
         Log::info('[Co-Found] Password reset token', [
             'user_id' => $user->id,
             'email'   => $user->email,

@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Exceptions\ConflictException;
+use App\Mail\Collaboration\ConnectionRequestMail;
 use App\Models\User;
 use App\Models\UserConnection;
 use App\Traits\SendsNotifications;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
 class ConnectionService
@@ -119,6 +121,16 @@ class ConnectionService
             body:     "{$requester->full_name} sent you a connection request.",
             data:     ['connection_id' => $connection->id, 'requester_id' => $requester->id],
             priority: 'normal',
+        );
+
+        $recipient = User::find($recipientId);
+
+        Mail::to($recipient->email)->queue(
+            new ConnectionRequestMail(
+                recipient:      $recipient,
+                requester:      $requester,
+                userConnection: $connection,
+            )
         );
 
         return $connection;

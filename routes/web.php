@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\EmailPreviewController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -16,3 +17,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// ── Email template previews (local only) ──────────────────────────────
+if (app()->isLocal()) {
+    Route::get(
+        '/email-preview/{template}',
+        EmailPreviewController::class
+    )->name('email.preview');
+}

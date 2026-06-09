@@ -4,9 +4,11 @@ namespace App\Services\Auth;
 
 use App\Exceptions\Auth\EmailAlreadyVerifiedException;
 use App\Exceptions\Auth\InvalidVerificationTokenException;
+use App\Mail\Auth\VerifyEmailMail;
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class EmailVerificationService
@@ -47,8 +49,8 @@ class EmailVerificationService
             'email_verification_expires' => $expiresAt,
         ]);
 
-        // TODO: swap with a proper Mailable once the mail module is built.
-        // Mail::to($user->email)->send(new VerifyEmailMail($token));
+        Mail::to($user->email)->send(new VerifyEmailMail($user, $token));
+
         Log::info('[Co-Found] Email verification token', [
             'user_id' => $user->id,
             'email'   => $user->email,
