@@ -77,15 +77,12 @@
 
     {{-- CTA --}}
     <div class="btn-row">
-        <a href="{{ $reviewUrl }}" class="btn btn-primary">Review application →</a>
-        <a href="{{ config('app.url') }}/projects/{{ $projectId }}/applications" class="btn btn-ghost">
-            View all applications
-        </a>
+        <a href="{{ $reviewUrl }}" class="btn btn-primary">Review applications →</a>
     </div>
 
     <p class="footer-note">
-        You can accept or decline directly from your
-        <a href="{{ config('app.url') }}/projects/{{ $projectId }}">project dashboard</a>.
+        Accept or decline from your
+        <a href="{{ $reviewUrl }}">project applications page</a>.
     </p>
 
 @endsection

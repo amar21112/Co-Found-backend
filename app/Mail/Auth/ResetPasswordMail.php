@@ -48,12 +48,16 @@ class ResetPasswordMail extends Mailable
 
     public function content(): Content
     {
+        $base = config('app.url');
+
         return new Content(
             view: 'emails.auth.reset-password',
             text: 'emails.plain.auth.reset-password',
             with: [
                 'userName'      => $this->user->full_name,
-                'resetUrl'      => config('app.url') . '/reset-password?token=' . $this->token,
+                // Frontend route: /reset-password?token=  OR  /reset-password/:token
+                // Page calls: POST /api/v1/auth/password/reset
+                'resetUrl'      => "$base/reset-password?token=$this->token",
                 'expiresInMins' => 60,
             ],
         );

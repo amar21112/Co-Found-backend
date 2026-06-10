@@ -68,7 +68,6 @@
     {{-- CTA --}}
     <div class="btn-row">
         <a href="{{ $projectUrl }}" class="btn btn-accent">Go to project →</a>
-        <a href="{{ $projectUrl }}/team" class="btn btn-ghost">Meet the team</a>
     </div>
 
     <div class="divider"></div>

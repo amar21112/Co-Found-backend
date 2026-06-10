@@ -52,12 +52,16 @@ class VerifyEmailMail extends Mailable
 
     public function content(): Content
     {
+        $base = config('app.url');
+
         return new Content(
             view: 'emails.auth.verify-email',
             text: 'emails.plain.auth.verify-email',
             with: [
                 'userName'        => $this->user->full_name,
-                'verificationUrl' => config('app.url') . '/verify-email?token=' . $this->token,
+                // Frontend route: /auth/email/verify/:token
+                // Page calls: GET /api/v1/auth/email/verify/{token}
+                'verificationUrl' => "$base/auth/email/verify/$this->token",
                 'expiresInHours'  => 24,
             ],
         );

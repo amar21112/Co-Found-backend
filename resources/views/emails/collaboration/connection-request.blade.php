@@ -72,16 +72,14 @@
 
     {{-- Actions --}}
     <div class="btn-row">
-        <a href="{{ $connectionsUrl }}?action=accept" class="btn btn-primary">Accept →</a>
-        <a href="{{ $profileUrl }}"                   class="btn btn-outline">View profile</a>
-        <a href="{{ $connectionsUrl }}?action=decline" class="btn btn-ghost">Decline</a>
+        <a href="{{ $manageUrl }}" class="btn btn-primary">View request →</a>
+        <a href="{{ $profileUrl }}" class="btn btn-outline">View profile</a>
     </div>
 
     <div class="divider"></div>
 
     <p class="footer-note">
-        Manage all your connection requests in your
-        <a href="{{ $connectionsUrl }}">connections dashboard</a>.
+        Open your <a href="{{ $manageUrl }}">connections page</a> to accept or decline.
     </p>
 
 @endsection

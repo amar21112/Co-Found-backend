@@ -53,6 +53,8 @@ class ApplicationAcceptedMail extends Mailable
 
     public function content(): Content
     {
+        $base = config('app.url');
+
         return new Content(
             view: 'emails.project.application-accepted',
             text: 'emails.plain.project.application-accepted',
@@ -60,7 +62,10 @@ class ApplicationAcceptedMail extends Mailable
                 'applicantName' => $this->applicant->full_name,
                 'projectTitle'  => $this->project->title,
                 'roleName'      => $this->application->role?->role_name,
-                'projectUrl'    => config('app.url') . "/projects/{$this->project->id}",
+                // Frontend route: /projects/:id
+                // Both buttons point to project details where team info is visible.
+                'projectUrl'    => "$base/projects/{$this->project->id}",
+                'teamUrl'       => "$base/projects/{$this->project->id}",
             ],
         );
     }
