@@ -32,7 +32,13 @@ return [
     ],
 
     'ml' => [
-        'secret'   => env('ML_SECRET'),
+        'secret' => env('ML_SECRET'),
         'base_url' => env('ML_BASE_URL'),
-    ]
+    ],
+
+    'ocr' => [
+        'url'     => env('OCR_SERVICE_URL'),
+        'secret'  => env('OCR_SERVICE_SECRET'),
+        'timeout' => env('OCR_SERVICE_TIMEOUT', 60),
+    ],
 ];

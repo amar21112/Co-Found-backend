@@ -12,17 +12,19 @@ use App\Exceptions\Verification\VerificationAttemptLimitException;
 use App\Models\IdentityVerification;
 use App\Models\User;
 use App\Repositories\Contracts\IdentityVerificationRepositoryInterface;
+use App\Services\Ocr\OcrEnricher;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 
 class IdentityVerificationService
 {
-    private const MAX_ATTEMPTS  = 3;
-    private const STORAGE_DISK  = 'local';
-    private const STORAGE_DIR   = 'verifications';
+    private const MAX_ATTEMPTS = 3;
+    private const STORAGE_DISK = 'local';
+    private const STORAGE_DIR  = 'verifications';
 
     public function __construct(
         private readonly IdentityVerificationRepositoryInterface $verificationRepo,
+        private readonly OcrEnricher $ocrEnricher,
     ) {}
 
     // =========================================================================
@@ -47,21 +49,19 @@ class IdentityVerificationService
     /**
      * Submit a new identity verification.
      *
-     * Accepts a fully-typed SubmitVerificationDTO from the request layer.
-     * Files are stored inside this method — the DTO carries UploadedFile
-     * instances; the repository only receives resolved storage paths.
-     *
-     * Business rules:
-     * 1. Rate limit — max MAX_ATTEMPTS total submissions per user.
-     * 2. Block resubmission if status is pending/under_review/escalated/verified.
-     * 3. Allow resubmission only if status is rejected.
-     * 4. id_card_number uniqueness — one ID card per verified account.
-     * 5. Document images stored privately on local disk.
-     * 6. Every attempt logged to verification_attempts.
+     *  Business rules:
+     *   1. Rate limit      — max MAX_ATTEMPTS total submissions per user.
+     *   2. Status guard    — resubmission allowed only after a rejected status.
+     *   3. OCR enrichment  — backend calls OCR to extract the NID from the front
+     *                        image when the user has not supplied it manually.
+     *                        Failure is non-fatal (handled inside OcrEnricher).
+     *   4. NID uniqueness  — one ID card per verified account.
+     *   5. Private storage — document images stored on the local disk, never public.
+     *   6. Attempt log     — every attempt (success or failure) is recorded.
      */
     public function submit(User $user, SubmitVerificationDTO $dto): IdentityVerification
     {
-        // ── 1. Rate limit ─────────────────────────────────────────────────────
+        // ── 1. Rate limit ──────────────────────────────────────────────────────
         $attemptCount = $this->verificationRepo->countAttempts($user->id);
 
         if ($attemptCount >= self::MAX_ATTEMPTS) {
@@ -72,10 +72,11 @@ class IdentityVerificationService
                 ip:             $dto->ipAddress,
                 submissionData: ['attempt_number' => $attemptCount + 1],
             );
+
             throw new VerificationAttemptLimitException(self::MAX_ATTEMPTS);
         }
 
-        // ── 2. Existing verification check ────────────────────────────────────
+        // ── 2. Status guard ─────────────────────────────────────────────────────
         $existing = $this->verificationRepo->findByUser($user->id);
 
         if ($existing && $existing->verification_status !== IdentityVerificationStatus::Rejected) {
@@ -86,12 +87,16 @@ class IdentityVerificationService
                 ip:             $dto->ipAddress,
                 submissionData: [],
             );
+
             throw new VerificationAlreadyExistsException($existing->verification_status);
         }
 
-        // ── 3. id_card_number uniqueness check ────────────────────────────────
-        if ($dto->idCardNumber) {
-            $hash = $this->verificationRepo->hashCardNumber($dto->idCardNumber);
+        // ── 3. OCR enrichment (best-effort, non-fatal) ──────────────────────────
+        $enriched = $this->ocrEnricher->enrich($dto);
+
+        // ── 4. NID uniqueness ───────────────────────────────────────────────────
+        if ($enriched->idCardNumber) {
+            $hash = $this->verificationRepo->hashCardNumber($enriched->idCardNumber);
 
             if ($this->verificationRepo->hashAlreadyVerified($hash, $user->id)) {
                 $this->verificationRepo->logAttempt(
@@ -101,36 +106,34 @@ class IdentityVerificationService
                     ip:             $dto->ipAddress,
                     submissionData: [],
                 );
+
                 throw new DuplicateIdentityCardException();
             }
         }
 
-        // ── 4. Store document images privately ────────────────────────────────
-        // Files are stored here — the repo receives resolved paths, not raw files.
-        $frontPath = $this->storeDocumentImage($dto->frontImage, $user->id, 'front');
-        $backPath  = $this->storeDocumentImage($dto->backImage,  $user->id, 'back');
+        // ── 5. Store images ─────────────────────────────────────────────────────
+        $frontPath = $this->storeImage($enriched->frontImage, $user->id, 'front');
+        $backPath  = $this->storeImage($enriched->backImage,  $user->id, 'back');
 
-        // ── 5. Build a storage DTO for the repository ─────────────────────────
-        // Replace UploadedFile instances with resolved paths before persisting.
+        // ── Persist ─────────────────────────────────────────────────────────────
         $storageDto = new StoredVerificationDTO(
             idCardImageFrontPath: $frontPath,
             idCardImageBackPath:  $backPath,
-            idCardNumber:         $dto->idCardNumber,
-            fullNameOnCard:       $dto->fullNameOnCard,
-            dateOfBirth:          $dto->dateOfBirth,
-            nationality:          $dto->nationality,
-            expiryDate:           $dto->expiryDate,
-            submissionMethod:     $dto->submissionMethod,
-            livenessCheckData:    $dto->livenessCheckData,
-            ipAddress:            $dto->ipAddress,
+            idCardNumber:         $enriched->idCardNumber,
+            fullNameOnCard:       $enriched->fullNameOnCard ?? '',
+            dateOfBirth:          $enriched->dateOfBirth,
+            nationality:          $enriched->nationality,
+            expiryDate:           $enriched->expiryDate,
+            submissionMethod:     $enriched->submissionMethod,
+            livenessCheckData:    $enriched->livenessCheckData,
+            ipAddress:            $enriched->ipAddress,
         );
 
-        // ── 6. Persist ────────────────────────────────────────────────────────
         $verification = $existing
             ? $this->verificationRepo->updateForResubmission($existing, $storageDto)
             : $this->verificationRepo->create($user, $storageDto);
 
-        // ── 7. Log success ────────────────────────────────────────────────────
+        // ── 6. Log success ───────────────────────────────────────────────────────
         $this->verificationRepo->logAttempt(
             userId:         $user->id,
             result:         'success',
@@ -150,10 +153,10 @@ class IdentityVerificationService
     // Private helpers
     // =========================================================================
 
-    private function storeDocumentImage(
+    private function storeImage(
         UploadedFile $file,
-        string                        $userId,
-        string                        $side,
+        string       $userId,
+        string       $side,
     ): string {
         $extension = $file->getClientOriginalExtension() ?: 'jpg';
         $filename  = Str::uuid() . "_$side.$extension";

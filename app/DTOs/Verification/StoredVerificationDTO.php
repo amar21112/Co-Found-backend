@@ -16,7 +16,7 @@ final readonly class StoredVerificationDTO
         public string  $idCardImageBackPath,
         public ?string $idCardNumber,
         public string  $fullNameOnCard,
-        public string  $dateOfBirth,
+        public ?string  $dateOfBirth,
         public ?string $nationality,
         public ?string $expiryDate,
         public string  $submissionMethod,

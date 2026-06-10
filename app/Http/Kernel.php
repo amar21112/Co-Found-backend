@@ -68,5 +68,6 @@ class Kernel extends HttpKernel
         'guest.content'    => \App\Http\Middleware\GuestContentMiddleware::class,
         'auth.ml'          => \App\Http\Middleware\AuthenticateMlService::class,
         'auth.jitsi'       => \App\Http\Middleware\AuthenticateJitsiService::class,
+        'auth.ocr'         => \App\Http\Middleware\AuthenticateOcrService::class,
     ];
 }
