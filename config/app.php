@@ -194,6 +194,7 @@ return [
         App\Providers\CallServiceProvider::class,
         App\Providers\MatchServiceProvider::class,
         App\Providers\VerificationServiceProvider::class,
+        App\Providers\OcrServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
