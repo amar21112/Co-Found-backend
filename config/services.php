@@ -33,6 +33,7 @@ return [
 
     'ml' => [
         'secret' => env('ML_SECRET'),
+        'base_url' => env('ML_BASE_URL'),
     ],
 
     'ocr' => [

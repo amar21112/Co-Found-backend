@@ -20,6 +20,11 @@ class MatchRepository implements MatchRepositoryInterface
     {
         $query = MatchModel::where('user_id', $user->id)
             ->with(['matchedUser', 'matchedProject'])
+            // Exclude expired matches — expires_at null means no expiry set (keep them)
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
             ->where(function ($q) {
                 $q->where('match_type', \App\Enums\MatchType::Collaborator->value)
                     ->orWhere(function ($q2) {
@@ -49,7 +54,7 @@ class MatchRepository implements MatchRepositoryInterface
         $allowed = ['compatibility_score', 'created_at', 'expires_at'];
         $sortBy = in_array($filters['sort_by'] ?? '', $allowed)
             ? $filters['sort_by']
-            : 'created_at';
+            : 'compatibility_score';                          // default: best match first
         $sortDir = ($filters['sort_dir'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
 
         return $query->orderBy($sortBy, $sortDir)->paginate($perPage);

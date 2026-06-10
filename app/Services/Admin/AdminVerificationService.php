@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Repositories\Contracts\AdminVerificationRepositoryInterface;
 use App\Repositories\Contracts\IdentityVerificationRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Jobs\GenerateMatchesJob;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 readonly class AdminVerificationService
@@ -121,6 +122,11 @@ readonly class AdminVerificationService
             ],
             ip: $ip,
         );
+
+        // Dispatch ML match generation for the newly approved user off the request cycle.
+        if ($dto->reviewAction->approvesUser()) {
+            GenerateMatchesJob::dispatch(userId: $verification->user_id);
+        }
 
         return $updated;
     }
