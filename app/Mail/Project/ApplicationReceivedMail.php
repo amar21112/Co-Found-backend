@@ -55,17 +55,22 @@ class ApplicationReceivedMail extends Mailable
 
     public function content(): Content
     {
+        $frontend = config('services.frontend.url');
+
         return new Content(
             view: 'emails.project.application-received',
             text: 'emails.plain.project.application-received',
             with: [
-                'ownerName'     => $this->owner->full_name,
-                'applicantName' => $this->applicant->full_name,
-                'projectTitle'  => $this->project->title,
-                'projectId'     => $this->project->id,
-                'roleName'      => $this->application->role?->role_name,
-                'coverNote'     => $this->application->cover_note ?? null,
-                'reviewUrl'     => config('app.url') . "/projects/{$this->project->id}/applications/{$this->application->id}",
+                'ownerName'       => $this->owner->full_name,
+                'applicantName'   => $this->applicant->full_name,
+                'projectTitle'    => $this->project->title,
+                'roleName'        => $this->application->role?->role_name,
+                'coverNote'       => $this->application->cover_note ?? null,
+                // Frontend deep-links — maps to real API:
+                // GET  /api/v1/projects/{project}/applications/{applicationId}
+                // PATCH /api/v1/projects/{project}/applications/{applicationId}/review
+                'reviewUrl'       => "$frontend/projects/{$this->project->id}/applications/{$this->application->id}",
+                'allAppsUrl'      => "$frontend/projects/{$this->project->id}/applications",
             ],
         );
     }

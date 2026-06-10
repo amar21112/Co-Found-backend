@@ -76,15 +76,13 @@
 
     {{-- Actions --}}
     <div class="btn-row">
-        <a href="{{ $inviteUrl }}?action=accept"  class="btn btn-accent">Accept invitation →</a>
-        <a href="{{ $inviteUrl }}?action=decline" class="btn btn-ghost">Decline</a>
+        <a href="{{ $manageUrl }}" class="btn btn-accent">View invitation →</a>
     </div>
 
     <div class="divider"></div>
 
     <p class="footer-note">
-        Manage all your invitations in your
-        <a href="{{ config('app.url') }}/invitations">Co-Found dashboard</a>.
+        Open your <a href="{{ $manageUrl }}">invitations page</a> to accept or decline.
         @if ($expiresAt)
             This invitation expires on {{ $expiresAt }}.
         @endif

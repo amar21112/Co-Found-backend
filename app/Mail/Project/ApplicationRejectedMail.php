@@ -53,13 +53,16 @@ class ApplicationRejectedMail extends Mailable
 
     public function content(): Content
     {
+        $base = config('app.url');
+
         return new Content(
             view: 'emails.project.application-rejected',
             text: 'emails.plain.project.application-rejected',
             with: [
                 'applicantName' => $this->applicant->full_name,
                 'projectTitle'  => $this->project->title,
-                'exploreUrl'    => config('app.url') . '/projects',
+                // Frontend route: /projects
+                'exploreUrl'    => "$base/projects",
             ],
         );
     }
