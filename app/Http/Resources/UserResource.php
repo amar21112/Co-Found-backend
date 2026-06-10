@@ -2,18 +2,11 @@
 
 namespace App\Http\Resources;
 
-use App\Services\ProfilePictureService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * UserResource
- *
- * profile_picture_url is stored in the DB as a relative path
- * (e.g. "profile_pictures/uuid.jpg").
- *
- * This resource converts it to a full public URL on the way out
- * so the frontend never needs to know about the storage internals.
  */
 class UserResource extends JsonResource
 {
@@ -23,18 +16,11 @@ class UserResource extends JsonResource
         $isGuest = $viewer && $viewer->isGuest();
         $isOwner = $viewer && $viewer->id === $this->id;
 
-        /** @var ProfilePictureService $pictureService */
-        $pictureService = app(ProfilePictureService::class);
-
         return [
             'id'                  => $this->id,
             'username'            => $this->username,
             'full_name'           => $this->full_name,
-
-            // ── Profile picture — always returned as a full URL ───────────────
-            // The DB column holds a relative storage path; we resolve it here.
-            // Falls back to null when no picture is set.
-            'profile_picture_url' => env('APP_URL') . $pictureService->toUrl($this->profile_picture_url),
+            'profile_picture_url' => $this->profile_picture_url,
 
             'bio'      => $this->bio,
             'location' => $this->location,

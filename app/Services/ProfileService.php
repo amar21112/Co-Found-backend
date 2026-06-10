@@ -32,7 +32,9 @@ class ProfileService
     {
         // ── Handle profile picture upload ─────────────────────────────────────
         if (isset($data['profile_picture']) && $data['profile_picture'] instanceof UploadedFile) {
-            $this->pictureService->delete($user->profile_picture_url);
+            // Read the raw DB path via getRawOriginal() — the casting would
+            // return a full URL, which ProfilePictureService::delete() cannot use.
+            $this->pictureService->delete($user->getRawOriginal('profile_picture_url'));
 
             $data['profile_picture_url'] = $this->pictureService->store($data['profile_picture']);
         }

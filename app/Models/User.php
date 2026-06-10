@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\ProfilePictureUrlCast;
 use App\Enums\AccountStatus;
 use App\Enums\IdentityVerificationLevel;
 use App\Enums\UserRole;
@@ -150,6 +151,7 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
+        'profile_picture_url'         => ProfilePictureUrlCast::class,
         'role'                        => UserRole::class,
         'account_status'              => AccountStatus::class,
         'identity_verification_level' => IdentityVerificationLevel::class,
